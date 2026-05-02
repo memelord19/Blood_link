@@ -3,20 +3,42 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: BloodLink - Blood Bank Management Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: donors
+    description: Donor management
+  - name: appointments
+    description: Appointment scheduling
+  - name: donations
+    description: Donation records
+  - name: blood-bags
+    description: Blood bag tracking
+  - name: stock
+    description: Blood stock management
+  - name: requests
+    description: Blood requests from healthcare establishments
+  - name: alerts
+    description: Shortage alerts
+  - name: invoices
+    description: Invoice management
+  - name: notifications
+    description: Notifications
+  - name: dashboard
+    description: Dashboard summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +46,808 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new donor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  # DONORS
+  /donors:
+    get:
+      operationId: listDonors
+      tags: [donors]
+      summary: List donors
+      parameters:
+        - name: cin
+          in: query
+          schema:
+            type: string
+        - name: bloodType
+          in: query
+          schema:
+            type: string
+        - name: region
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of donors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DonorListResponse"
+
+  /donors/{id}:
+    get:
+      operationId: getDonor
+      tags: [donors]
+      summary: Get donor by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Donor details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Donor"
+
+  /donors/by-cin/{cin}:
+    get:
+      operationId: getDonorByCin
+      tags: [donors]
+      summary: Get donor by CIN
+      parameters:
+        - name: cin
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Donor found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Donor"
+        "404":
+          description: Donor not found
+
+  /donors/register:
+    post:
+      operationId: registerDonor
+      tags: [donors]
+      summary: Register a donor manually (by center)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterDonorBody"
+      responses:
+        "201":
+          description: Donor registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Donor"
+
+  /donors/{id}/eligibility:
+    get:
+      operationId: checkDonorEligibility
+      tags: [donors]
+      summary: Check donor eligibility
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Eligibility result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EligibilityResult"
+
+  /donors/{id}/medical-form:
+    post:
+      operationId: submitMedicalForm
+      tags: [donors]
+      summary: Submit pre-donation medical form
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedicalFormBody"
+      responses:
+        "200":
+          description: Form submitted, eligibility evaluated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EligibilityResult"
+
+  # APPOINTMENTS
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List appointments
+      parameters:
+        - name: donorId
+          in: query
+          schema:
+            type: integer
+        - name: centerId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, rejected, cancelled, completed]
+        - name: date
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of appointments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentListResponse"
+
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Request an appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAppointmentBody"
+      responses:
+        "201":
+          description: Appointment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /appointments/{id}:
+    get:
+      operationId: getAppointment
+      tags: [appointments]
+      summary: Get appointment details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Appointment details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+    patch:
+      operationId: updateAppointment
+      tags: [appointments]
+      summary: Update appointment (confirm, reject, cancel)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppointmentBody"
+      responses:
+        "200":
+          description: Updated appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /appointments/available-slots:
+    get:
+      operationId: getAvailableSlots
+      tags: [appointments]
+      summary: Get available appointment slots
+      parameters:
+        - name: centerId
+          in: query
+          schema:
+            type: integer
+        - name: region
+          in: query
+          schema:
+            type: string
+        - name: date
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Available slots
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailableSlotsResponse"
+
+  # DONATIONS
+  /donations:
+    get:
+      operationId: listDonations
+      tags: [donations]
+      summary: List donation records
+      parameters:
+        - name: donorId
+          in: query
+          schema:
+            type: integer
+        - name: centerId
+          in: query
+          schema:
+            type: integer
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Donation records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DonationListResponse"
+
+    post:
+      operationId: recordDonation
+      tags: [donations]
+      summary: Record a new donation (barcode scan)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordDonationBody"
+      responses:
+        "201":
+          description: Donation recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Donation"
+
+  # BLOOD BAGS
+  /blood-bags:
+    get:
+      operationId: listBloodBags
+      tags: [blood-bags]
+      summary: List blood bags in stock
+      parameters:
+        - name: bloodType
+          in: query
+          schema:
+            type: string
+        - name: centerId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [available, reserved, transfused, expired, rejected]
+        - name: expiringBefore
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Blood bags
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BloodBagListResponse"
+
+  /blood-bags/{id}:
+    get:
+      operationId: getBloodBag
+      tags: [blood-bags]
+      summary: Get blood bag details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Blood bag
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BloodBag"
+
+  /blood-bags/scan/{barcode}:
+    get:
+      operationId: scanBloodBag
+      tags: [blood-bags]
+      summary: Scan blood bag by barcode
+      parameters:
+        - name: barcode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Blood bag data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BloodBag"
+        "404":
+          description: Not found
+
+  /blood-bags/{id}/receive:
+    post:
+      operationId: receiveBloodBag
+      tags: [blood-bags]
+      summary: Receive a blood bag (blood bank inspection)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceiveBloodBagBody"
+      responses:
+        "200":
+          description: Reception recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BloodBag"
+
+  # STOCK
+  /stock:
+    get:
+      operationId: getStock
+      tags: [stock]
+      summary: Get blood stock levels by center
+      parameters:
+        - name: centerId
+          in: query
+          schema:
+            type: integer
+        - name: region
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Stock levels
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockResponse"
+
+  # BLOOD REQUESTS
+  /requests:
+    get:
+      operationId: listBloodRequests
+      tags: [requests]
+      summary: List blood requests
+      parameters:
+        - name: establishmentId
+          in: query
+          schema:
+            type: integer
+        - name: centerId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [submitted, processing, accepted, shipped, delivered, rejected]
+        - name: urgency
+          in: query
+          schema:
+            type: string
+            enum: [normal, urgent, critical]
+      responses:
+        "200":
+          description: Blood requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BloodRequestListResponse"
+
+    post:
+      operationId: createBloodRequest
+      tags: [requests]
+      summary: Create a blood request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBloodRequestBody"
+      responses:
+        "201":
+          description: Request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BloodRequest"
+
+  /requests/{id}:
+    get:
+      operationId: getBloodRequest
+      tags: [requests]
+      summary: Get blood request details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Blood request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BloodRequest"
+
+    patch:
+      operationId: updateBloodRequest
+      tags: [requests]
+      summary: Update blood request status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBloodRequestBody"
+      responses:
+        "200":
+          description: Updated request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BloodRequest"
+
+  # ALERTS
+  /alerts:
+    get:
+      operationId: listAlerts
+      tags: [alerts]
+      summary: List shortage alerts
+      parameters:
+        - name: bloodType
+          in: query
+          schema:
+            type: string
+        - name: region
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, resolved]
+      responses:
+        "200":
+          description: Alerts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertListResponse"
+
+    post:
+      operationId: createAlert
+      tags: [alerts]
+      summary: Create shortage alert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAlertBody"
+      responses:
+        "201":
+          description: Alert created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alert"
+
+  /alerts/{id}:
+    patch:
+      operationId: updateAlert
+      tags: [alerts]
+      summary: Update alert (resolve, acknowledge)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAlertBody"
+      responses:
+        "200":
+          description: Updated alert
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alert"
+
+  # INVOICES
+  /invoices:
+    get:
+      operationId: listInvoices
+      tags: [invoices]
+      summary: List invoices
+      parameters:
+        - name: establishmentId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, paid, rejected]
+      responses:
+        "200":
+          description: Invoices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceListResponse"
+
+  /invoices/{id}/pay:
+    post:
+      operationId: payInvoice
+      tags: [invoices]
+      summary: Pay an invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayInvoiceBody"
+      responses:
+        "200":
+          description: Payment processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+
+  # NOTIFICATIONS
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications for current user
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [shortage_alert, reminder, general]
+        - name: read
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationListResponse"
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  # DASHBOARD SUMMARIES
+  /dashboard/donor:
+    get:
+      operationId: getDonorDashboard
+      tags: [dashboard]
+      summary: Get donor dashboard summary
+      responses:
+        "200":
+          description: Donor dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DonorDashboard"
+
+  /dashboard/center:
+    get:
+      operationId: getCenterDashboard
+      tags: [dashboard]
+      summary: Get blood center dashboard summary
+      responses:
+        "200":
+          description: Center dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CenterDashboard"
+
+  /dashboard/establishment:
+    get:
+      operationId: getEstablishmentDashboard
+      tags: [dashboard]
+      summary: Get healthcare establishment dashboard summary
+      responses:
+        "200":
+          description: Establishment dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EstablishmentDashboard"
+
+  /dashboard/blood-stats:
+    get:
+      operationId: getBloodStats
+      tags: [dashboard]
+      summary: Get blood type statistics (for landing page counters)
+      responses:
+        "200":
+          description: Blood type statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BloodStatsResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +855,737 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    # AUTH
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required: [email, password]
+
+    RegisterBody:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        cin:
+          type: string
+        dateOfBirth:
+          type: string
+        gender:
+          type: string
+          enum: [male, female]
+        weight:
+          type: number
+        phone:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        region:
+          type: string
+        bloodType:
+          type: string
+          enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+        acceptedCharter:
+          type: boolean
+      required: [firstName, lastName, cin, dateOfBirth, gender, weight, phone, email, password, region, bloodType, acceptedCharter]
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required: [user, token]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [donor, transfusion_center, blood_bank, hospital, clinic]
+        bloodType:
+          type: string
+        region:
+          type: string
+        organizationName:
+          type: string
+      required: [id, firstName, lastName, email, role]
+
+    # DONORS
+    Donor:
+      type: object
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        cin:
+          type: string
+        dateOfBirth:
+          type: string
+        gender:
+          type: string
+        weight:
+          type: number
+        phone:
+          type: string
+        email:
+          type: string
+        region:
+          type: string
+        bloodType:
+          type: string
+          enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+        eligibilityStatus:
+          type: string
+          enum: [eligible, temporarily_excluded, permanently_ineligible]
+        totalDonations:
+          type: integer
+        lastDonationDate:
+          type: string
+        nextEligibleDate:
+          type: string
+        annualQuota:
+          type: integer
+        annualDonationsCount:
+          type: integer
+      required: [id, firstName, lastName, cin, bloodType, eligibilityStatus]
+
+    DonorListResponse:
+      type: object
+      properties:
+        donors:
+          type: array
+          items:
+            $ref: "#/components/schemas/Donor"
+        total:
+          type: integer
+      required: [donors, total]
+
+    RegisterDonorBody:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        cin:
+          type: string
+        dateOfBirth:
+          type: string
+        gender:
+          type: string
+          enum: [male, female]
+        weight:
+          type: number
+        phone:
+          type: string
+        email:
+          type: string
+        region:
+          type: string
+        bloodType:
+          type: string
+          enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+      required: [firstName, lastName, cin, dateOfBirth, gender, weight, bloodType]
+
+    EligibilityResult:
+      type: object
+      properties:
+        eligible:
+          type: boolean
+        status:
+          type: string
+          enum: [eligible, temporarily_excluded, permanently_ineligible]
+        reason:
+          type: string
+        nextEligibleDate:
+          type: string
+      required: [eligible, status]
+
+    MedicalFormBody:
+      type: object
+      properties:
+        currentMedications:
+          type: string
+        recentSurgeries:
+          type: boolean
+        recentTravelEndemicZones:
+          type: boolean
+        recentDentalCare:
+          type: boolean
+        lastDonationDate:
+          type: string
+        otherNotes:
+          type: string
+      required: [currentMedications, recentSurgeries, recentTravelEndemicZones, recentDentalCare]
+
+    # APPOINTMENTS
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+        donorId:
+          type: integer
+        donorName:
+          type: string
+        centerId:
+          type: integer
+        centerName:
+          type: string
+        region:
+          type: string
+        date:
+          type: string
+        time:
+          type: string
+        status:
+          type: string
+          enum: [pending, confirmed, rejected, cancelled, completed]
+        notes:
+          type: string
+        createdAt:
+          type: string
+      required: [id, donorId, centerId, date, time, status]
+
+    AppointmentListResponse:
+      type: object
+      properties:
+        appointments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+        total:
+          type: integer
+      required: [appointments, total]
+
+    CreateAppointmentBody:
+      type: object
+      properties:
+        centerId:
+          type: integer
+        date:
+          type: string
+        time:
+          type: string
+        notes:
+          type: string
+      required: [centerId, date, time]
+
+    UpdateAppointmentBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [confirmed, rejected, cancelled, completed]
+        assignedSlot:
+          type: string
+        notes:
+          type: string
+      required: [status]
+
+    AvailableSlotsResponse:
+      type: object
+      properties:
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSlot"
+      required: [slots]
+
+    TimeSlot:
+      type: object
+      properties:
+        date:
+          type: string
+        time:
+          type: string
+        centerId:
+          type: integer
+        centerName:
+          type: string
+        available:
+          type: boolean
+      required: [date, time, centerId, available]
+
+    # DONATIONS
+    Donation:
+      type: object
+      properties:
+        id:
+          type: integer
+        donorId:
+          type: integer
+        donorName:
+          type: string
+        centerId:
+          type: integer
+        centerName:
+          type: string
+        bloodBagId:
+          type: integer
+        bloodBagBarcode:
+          type: string
+        bloodType:
+          type: string
+        donationDate:
+          type: string
+        status:
+          type: string
+          enum: [collected, qualified, rejected]
+      required: [id, donorId, centerId, bloodType, donationDate, status]
+
+    DonationListResponse:
+      type: object
+      properties:
+        donations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Donation"
+        total:
+          type: integer
+      required: [donations, total]
+
+    RecordDonationBody:
+      type: object
+      properties:
+        donorId:
+          type: integer
+        barcode:
+          type: string
+        bloodType:
+          type: string
+          enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+        collectionDate:
+          type: string
+        expirationDate:
+          type: string
+      required: [donorId, barcode, bloodType, collectionDate, expirationDate]
+
+    # BLOOD BAGS
+    BloodBag:
+      type: object
+      properties:
+        id:
+          type: integer
+        barcode:
+          type: string
+        bloodType:
+          type: string
+          enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+        donorId:
+          type: integer
+        centerId:
+          type: integer
+        centerName:
+          type: string
+        collectionDate:
+          type: string
+        expirationDate:
+          type: string
+        status:
+          type: string
+          enum: [available, reserved, transfused, expired, rejected]
+        rejectionReason:
+          type: string
+        receivedAt:
+          type: string
+      required: [id, barcode, bloodType, collectionDate, expirationDate, status]
+
+    BloodBagListResponse:
+      type: object
+      properties:
+        bloodBags:
+          type: array
+          items:
+            $ref: "#/components/schemas/BloodBag"
+        total:
+          type: integer
+      required: [bloodBags, total]
+
+    ReceiveBloodBagBody:
+      type: object
+      properties:
+        temperatureOk:
+          type: boolean
+        integrityOk:
+          type: boolean
+        accepted:
+          type: boolean
+        rejectionReason:
+          type: string
+      required: [temperatureOk, integrityOk, accepted]
+
+    # STOCK
+    StockLevel:
+      type: object
+      properties:
+        bloodType:
+          type: string
+          enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+        available:
+          type: integer
+        reserved:
+          type: integer
+        expiringSoon:
+          type: integer
+        threshold:
+          type: integer
+        status:
+          type: string
+          enum: [ok, warning, critical]
+      required: [bloodType, available, reserved, expiringSoon, threshold, status]
+
+    StockResponse:
+      type: object
+      properties:
+        centerId:
+          type: integer
+        centerName:
+          type: string
+        region:
+          type: string
+        levels:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockLevel"
+        lastUpdated:
+          type: string
+      required: [levels, lastUpdated]
+
+    # BLOOD REQUESTS
+    BloodRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        establishmentId:
+          type: integer
+        establishmentName:
+          type: string
+        centerId:
+          type: integer
+        centerName:
+          type: string
+        bloodType:
+          type: string
+          enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+        volume:
+          type: number
+        urgency:
+          type: string
+          enum: [normal, urgent, critical]
+        status:
+          type: string
+          enum: [submitted, processing, accepted, shipped, delivered, rejected]
+        bagIds:
+          type: array
+          items:
+            type: integer
+        estimatedDelivery:
+          type: string
+        submittedAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, establishmentId, bloodType, volume, urgency, status, submittedAt]
+
+    BloodRequestListResponse:
+      type: object
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/BloodRequest"
+        total:
+          type: integer
+      required: [requests, total]
+
+    CreateBloodRequestBody:
+      type: object
+      properties:
+        bloodType:
+          type: string
+          enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+        volume:
+          type: number
+        urgency:
+          type: string
+          enum: [normal, urgent, critical]
+      required: [bloodType, volume, urgency]
+
+    UpdateBloodRequestBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [processing, accepted, shipped, delivered, rejected]
+        bagIds:
+          type: array
+          items:
+            type: integer
+        estimatedDelivery:
+          type: string
+        rejectionReason:
+          type: string
+      required: [status]
+
+    # ALERTS
+    Alert:
+      type: object
+      properties:
+        id:
+          type: integer
+        centerId:
+          type: integer
+        centerName:
+          type: string
+        bloodType:
+          type: string
+          enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+        region:
+          type: string
+        urgency:
+          type: string
+          enum: [normal, urgent, critical]
+        message:
+          type: string
+        status:
+          type: string
+          enum: [active, resolved]
+        acknowledgedBy:
+          type: array
+          items:
+            type: integer
+        createdAt:
+          type: string
+        resolvedAt:
+          type: string
+      required: [id, centerId, bloodType, region, urgency, message, status, createdAt]
+
+    AlertListResponse:
+      type: object
+      properties:
+        alerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Alert"
+        total:
+          type: integer
+      required: [alerts, total]
+
+    CreateAlertBody:
+      type: object
+      properties:
+        bloodType:
+          type: string
+          enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+        region:
+          type: string
+        urgency:
+          type: string
+          enum: [normal, urgent, critical]
+        message:
+          type: string
+      required: [bloodType, region, urgency, message]
+
+    UpdateAlertBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [resolved]
+        acknowledge:
+          type: boolean
+      required: [status]
+
+    # INVOICES
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: integer
+        establishmentId:
+          type: integer
+        establishmentName:
+          type: string
+        requestId:
+          type: integer
+        amount:
+          type: number
+        status:
+          type: string
+          enum: [pending, paid, rejected]
+        isEmergency:
+          type: boolean
+        dueDate:
+          type: string
+        paidAt:
+          type: string
+        createdAt:
+          type: string
+      required: [id, establishmentId, amount, status, createdAt]
+
+    InvoiceListResponse:
+      type: object
+      properties:
+        invoices:
+          type: array
+          items:
+            $ref: "#/components/schemas/Invoice"
+        total:
+          type: integer
+      required: [invoices, total]
+
+    PayInvoiceBody:
+      type: object
+      properties:
+        cardNumber:
+          type: string
+        expiryDate:
+          type: string
+        cvv:
+          type: string
+      required: [cardNumber, expiryDate, cvv]
+
+    # NOTIFICATIONS
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        type:
+          type: string
+          enum: [shortage_alert, reminder, general, appointment_update, request_update]
+        title:
+          type: string
+        message:
+          type: string
+        read:
+          type: boolean
+        createdAt:
+          type: string
+        relatedId:
+          type: integer
+      required: [id, userId, type, title, message, read, createdAt]
+
+    NotificationListResponse:
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        unreadCount:
+          type: integer
+        total:
+          type: integer
+      required: [notifications, unreadCount, total]
+
+    # DASHBOARD
+    DonorDashboard:
+      type: object
+      properties:
+        eligibilityStatus:
+          type: string
+          enum: [eligible, temporarily_excluded, permanently_ineligible]
+        nextDonationDate:
+          type: string
+        totalDonations:
+          type: integer
+        annualDonations:
+          type: integer
+        annualQuota:
+          type: integer
+        unreadAlerts:
+          type: integer
+        lastDonationDate:
+          type: string
+      required: [eligibilityStatus, totalDonations, annualDonations, annualQuota, unreadAlerts]
+
+    CenterDashboard:
+      type: object
+      properties:
+        stockLevels:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockLevel"
+        pendingAppointments:
+          type: integer
+        pendingRequests:
+          type: integer
+        totalDonationsToday:
+          type: integer
+        activeAlerts:
+          type: integer
+        criticalStockTypes:
+          type: array
+          items:
+            type: string
+      required: [stockLevels, pendingAppointments, pendingRequests, totalDonationsToday, activeAlerts]
+
+    EstablishmentDashboard:
+      type: object
+      properties:
+        activeRequests:
+          type: integer
+        pendingRequests:
+          type: integer
+        deliveredRequests:
+          type: integer
+        urgentRequests:
+          type: integer
+        pendingInvoices:
+          type: integer
+        totalInvoiceAmount:
+          type: number
+      required: [activeRequests, pendingRequests, deliveredRequests, urgentRequests, pendingInvoices, totalInvoiceAmount]
+
+    BloodStatsResponse:
+      type: object
+      properties:
+        stats:
+          type: array
+          items:
+            $ref: "#/components/schemas/BloodTypeStat"
+        totalDonors:
+          type: integer
+        totalDonations:
+          type: integer
+        totalCenters:
+          type: integer
+      required: [stats, totalDonors, totalDonations, totalCenters]
+
+    BloodTypeStat:
+      type: object
+      properties:
+        bloodType:
+          type: string
+        donorCount:
+          type: integer
+        percentage:
+          type: number
+      required: [bloodType, donorCount, percentage]

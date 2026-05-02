@@ -1,0 +1,84 @@
+Vous êtes un designer UI/UX senior. Concevez l’ensemble complet des interfaces web pour **BloodLink**, une plateforme centralisée de gestion des banques de sang pour le système de santé tunisien. La plateforme connecte quatre types d’utilisateurs authentifiés, chacun disposant d’une interface dédiée et personnalisée.
+
+---
+
+## DIRECTIVES GLOBALES DE DESIGN :
+
+* Palette de couleurs : rouge profond #C0392B, blanc #FFFFFF, gris clair #F5F5F5, gris foncé #2C3E50
+* Le logo BloodLink (un cœur avec une goutte de sang) doit apparaître sur chaque page
+* Interface médicale propre, moderne et professionnelle
+* Design responsive (priorité desktop)
+* Indicateurs de support bilingue arabe/français dans la barre de navigation
+* Chaque interface commence par un tableau de bord basé sur le rôle après connexion
+
+---
+
+## PAGES PARTAGÉES (tous les utilisateurs) :
+
+**Page d’accueil (Landing Page)** — Section héro avec branding BloodLink, slogan *« Donner du sang, sauver des vies »*, trois boutons d’entrée : « Je suis un donneur », « Je suis un établissement de santé », « Je suis un centre de sang ». Statistiques des groupes sanguins affichées sous forme de compteurs animés.
+
+**Page de connexion unifiée** — Champs email + mot de passe, rôle détecté automatiquement à partir des identifiants, lien « Mot de passe oublié ».
+
+**Page d’inscription (Donneur)** — Champs : prénom, nom, CIN, date de naissance, sexe, poids, téléphone, email, mot de passe, région, groupe sanguin. Charte éthique obligatoire affichée avec case à cocher : *« J’ai lu et j’accepte la charte du donneur BloodLink »*. Inscription bloquée si non cochée.
+
+---
+
+## INTERFACE 1 — TABLEAU DE BORD DONNEUR
+
+Après connexion, le donneur voit un espace personnalisé avec son badge de groupe sanguin et son statut d’éligibilité.
+
+**Pages à générer :**
+
+* **Tableau de bord** — Carte de statut d’éligibilité (Éligible / Temporairement exclu / Définitivement inapte), prochaine date possible de don, nombre de dons effectués, compteur d’alertes non lues, boutons d’action rapide
+* **Formulaire médical pré-don** — Questionnaire de santé : médicaments actuels, chirurgies récentes, voyages récents en zones endémiques, soins dentaires, date du dernier don. Le système évalue automatiquement l’éligibilité après soumission et affiche le résultat
+* **Demande de rendez-vous** — Calendrier interactif montrant les créneaux disponibles par région et centre, sélection du créneau (date, heure, centre), bouton de confirmation, option d’annulation pour les rendez-vous existants
+* **Historique des dons** — Tableau listant tous les dons passés : date, centre, ID de la poche de sang, statut. Barre de progression du quota annuel (ex : 2/5 dons cette année)
+* **Centre de notifications** — Deux onglets : « Alertes de pénurie » (besoins urgents par groupe sanguin et région avec bouton « Prendre rendez-vous ») et « Autres notifications » (rappels d’éligibilité, annonces générales). Chaque notification est marquée comme lue au clic
+
+---
+
+## INTERFACE 2 — TABLEAU DE BORD CENTRE DE STOCKAGE ET DISTRIBUTION
+
+Interface partagée entre deux sous-rôles : Centre de transfusion sanguine et Banque de sang, avec de légères variations.
+
+**Pages à générer :**
+
+* **Tableau de bord** — Cartes de stock par groupe sanguin (A+, A-, B+, B-, AB+, AB-, O+, O-) avec alertes codées par couleur (vert/orange/rouge selon seuil critique), compteur des demandes de rendez-vous en attente, compteur des demandes des établissements de santé
+* **Enregistrement donneur (donneur spontané)** — Formulaire manuel : recherche par CIN (si donneur existant trouvé, profil affiché ; sinon, formulaire complet), évaluation automatique de l’éligibilité (âge, poids, sexe, date du dernier don), résultat affiché « Éligible » ou « Non éligible »
+* **Consultation historique des dons** — Tableau avec recherche par CIN, groupe sanguin, région, date. Vue détaillée du donneur : quota annuel restant, prochaine date éligible
+* **Gestion des rendez-vous** — Liste des demandes en attente avec détails du donneur, interface d’attribution de créneaux, boutons de confirmation/rejet
+* **Enregistrement de collecte (Centre de transfusion uniquement)** — Champ de scan de code-barres, informations décodées (groupe sanguin, Rh, date de collecte, date d’expiration, ID donneur), avertissement de doublon, confirmation de mise à jour du stock
+* **Réception de poche de sang (Banque de sang uniquement)** — Scan code-barres pour vérifier l’origine, checklist d’inspection (température, intégrité), boutons Accepter / Rejeter avec champ obligatoire de motif de rejet
+* **Vérification du stock** — Tableau filtrable (groupe sanguin, région, date). Poches proches de l’expiration en orange. Alerte visible en cas de stock critique
+* **Consultation des demandes des établissements de santé** — Liste des demandes : établissement, groupe sanguin, volume, niveau d’urgence, statut. Actions : Accepter / Rediriger / Rejeter
+* **Suivi des livraisons (Centre de transfusion uniquement)** — Tableau en temps réel : destination, nombre de poches, statut (En transit / Livré), heure estimée
+* **Gestion des alertes de pénurie (Banque de sang)** — Formulaire de création : groupe sanguin, région, urgence, message. Historique des alertes : Actif / Résolu
+* **Alertes reçues (Centre de transfusion)** — Flux de notifications des banques de sang avec détails : banque émettrice, groupe sanguin, urgence, date. Bouton « Accusé de réception »
+
+---
+
+## INTERFACE 3 — TABLEAU DE BORD ÉTABLISSEMENT DE SANTÉ
+
+Deux sous-rôles : Hôpital et Clinique (avec fonctionnalité supplémentaire pour la clinique).
+
+**Pages à générer :**
+
+* **Tableau de bord** — Résumé des demandes actives (En attente / Accepté / Expédié / Livré), demandes urgentes mises en évidence, bouton « Nouvelle demande de sang »
+* **Formulaire de demande de sang** — Champs : groupe sanguin, Rh, volume, niveau d’urgence (Normal / Urgent / Critique). Logique d’acheminement affichée : « Votre demande sera envoyée à votre banque interne » ou « directement au centre de transfusion ». Bouton Soumettre
+* **Suivi des demandes** — Suivi en temps réel sous forme de barre de progression : Soumis → En cours → Accepté → Expédié → Livré. Vue détaillée avec IDs des poches et délai estimé
+* **Paiement des factures (Clinique uniquement)** — Liste des factures en attente avec montants, bouton « Payer » ouvrant un formulaire sécurisé VISA (numéro, expiration, CVV). Statut : En attente / Payé / Refusé. Badge livraison d’urgence pour demandes critiques avec paiement différé
+
+---
+
+## COMPOSANTS GLOBAUX SUPPLÉMENTAIRES :
+
+* **Barre de navigation supérieure** — Logo, nom utilisateur, badge de rôle (couleur selon rôle), sélecteur langue FR/AR, bouton déconnexion
+* **Menu latéral** — Liens de navigation spécifiques au rôle avec icônes
+* **Bannière d’alerte** — Bandeau rouge affiché sur les interfaces des centres en cas de stock critique
+* **Cloche de notification** — Compteur en temps réel sur tous les tableaux de bord avec aperçu des 3 dernières notifications
+* **Modal scanner code-barres** — Composant réutilisable avec animation de scan, affichage des données décodées, états succès/erreur
+* **Badge groupe sanguin** — Badge circulaire coloré utilisé dans les profils donneurs et les enregistrements de poches
+
+---
+
+Générez toutes les pages sous forme de maquettes haute fidélité avec des données réalistes fictives. Maintenez une cohérence visuelle sur toutes les interfaces. Chaque page doit clairement afficher le rôle et le nom de l’utilisateur connecté.

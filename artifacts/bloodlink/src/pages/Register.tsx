@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CheckSquare, UserPlus } from "lucide-react";
+import { CheckSquare, UserPlus, AlertTriangle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +52,16 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+function computeAge(dateOfBirth: string): number {
+  if (!dateOfBirth) return 0;
+  const dob = new Date(dateOfBirth);
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+  return age;
+}
+
 export default function Register() {
   const [, navigate] = useLocation();
   const { login } = useAuth();
@@ -62,6 +72,18 @@ export default function Register() {
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
+
+  const dobValue = watch("dateOfBirth");
+  const weightValue = watch("weight");
+  const genderValue = watch("gender");
+
+  const age = computeAge(dobValue);
+  const weight = parseFloat(weightValue) || 0;
+  const isTooYoung = dobValue && age < 18;
+  const isTooOld = dobValue && age > 65;
+  const isTooLight = weightValue && weight < 50;
+  const isPregnancyRisk = genderValue === "female";
+  const isIneligible = isTooYoung || isTooOld || isTooLight;
 
   const onSubmit = async (data: FormData) => {
     if (!charterAccepted) {
@@ -96,6 +118,20 @@ export default function Register() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-5">
+            {/* Eligibility info banner */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+              <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+              <div className="text-sm text-blue-800">
+                <p className="font-semibold mb-1">Critères d'éligibilité au don de sang</p>
+                <ul className="text-xs space-y-0.5 text-blue-700 list-disc list-inside">
+                  <li>Âge compris entre 18 et 65 ans</li>
+                  <li>Poids supérieur ou égal à 50 kg</li>
+                  <li>Pas de grossesse en cours (pour les femmes)</li>
+                  <li>Délai de 56 jours minimum entre deux dons</li>
+                </ul>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm font-medium">Prénom *</Label>
@@ -119,6 +155,21 @@ export default function Register() {
                 <Label className="text-sm font-medium">Date de naissance *</Label>
                 <Input type="date" {...register("dateOfBirth")} className="mt-1.5" />
                 {errors.dateOfBirth && <p className="text-destructive text-xs mt-1">{errors.dateOfBirth.message}</p>}
+                {isTooYoung && (
+                  <p className="text-orange-600 text-xs mt-1 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Vous devez avoir au moins 18 ans pour donner votre sang.
+                  </p>
+                )}
+                {isTooOld && (
+                  <p className="text-orange-600 text-xs mt-1 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Le don de sang n'est pas recommandé après 65 ans.
+                  </p>
+                )}
+                {dobValue && !isTooYoung && !isTooOld && age > 0 && (
+                  <p className="text-green-600 text-xs mt-1">Âge : {age} ans ✓</p>
+                )}
               </div>
             </div>
 
@@ -133,11 +184,23 @@ export default function Register() {
                   </SelectContent>
                 </Select>
                 {errors.gender && <p className="text-destructive text-xs mt-1">{errors.gender.message}</p>}
+                {isPregnancyRisk && (
+                  <p className="text-blue-600 text-xs mt-1 flex items-center gap-1">
+                    <Info className="w-3 h-3" />
+                    Quota : 3 dons/an max pour les femmes.
+                  </p>
+                )}
               </div>
               <div>
                 <Label className="text-sm font-medium">Poids (kg) *</Label>
-                <Input type="number" {...register("weight")} placeholder="70" min="50" className="mt-1.5" />
+                <Input type="number" {...register("weight")} placeholder="70" min="1" className="mt-1.5" />
                 {errors.weight && <p className="text-destructive text-xs mt-1">{errors.weight.message}</p>}
+                {isTooLight && (
+                  <p className="text-orange-600 text-xs mt-1 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Poids minimum requis : 50 kg.
+                  </p>
+                )}
               </div>
               <div>
                 <Label className="text-sm font-medium">Groupe sanguin *</Label>
@@ -150,6 +213,20 @@ export default function Register() {
                 {errors.bloodType && <p className="text-destructive text-xs mt-1">{errors.bloodType.message}</p>}
               </div>
             </div>
+
+            {/* Ineligibility warning */}
+            {isIneligible && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="bg-orange-50 border-2 border-orange-300 rounded-xl p-4 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-orange-900">⚠ Vous ne remplissez pas encore les critères d'éligibilité</p>
+                  <p className="text-xs text-orange-700 mt-1">
+                    Vous pouvez tout de même créer votre compte. Votre statut sera réévalué lors de votre formulaire médical.
+                  </p>
+                </div>
+              </motion.div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>

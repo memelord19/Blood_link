@@ -9,6 +9,7 @@ export interface AuthUser {
   region?: string;
   organizationName?: string;
   bloodType?: string;
+  gender?: string;
 }
 
 interface AuthContextType {
@@ -66,8 +67,8 @@ export function getDashboardPath(role: string): string {
     case "donor": return "/donor/dashboard";
     case "transfusion_center":
     case "blood_bank": return "/center/dashboard";
-    case "hospital":
-    case "clinic": return "/establishment/dashboard";
+    case "hospital": return "/hospital/dashboard";
+    case "clinic": return "/clinic/dashboard";
     default: return "/";
   }
 }

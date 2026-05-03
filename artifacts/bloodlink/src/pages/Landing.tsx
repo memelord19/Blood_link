@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link } from "wouter";
 import { motion, useInView } from "framer-motion";
-import { Heart, Shield, Clock, Users, ArrowRight, Phone, Mail, MapPin } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Heart, Shield, Clock, Users, ArrowRight, Building2, Activity, Hospital } from "lucide-react";
 import { BloodLinkLogo } from "@/components/BloodLinkLogo";
 import { useGetBloodStats } from "@workspace/api-client-react";
 
@@ -11,6 +10,54 @@ const BT_COLORS: Record<string, string> = {
   "A+": "#C0392B", "A-": "#E74C3C", "B+": "#2980B9", "B-": "#3498DB",
   "AB+": "#8E44AD", "AB-": "#9B59B6", "O+": "#27AE60", "O-": "#2ECC71",
 };
+
+const ROLES = [
+  {
+    label: "Donneur",
+    desc: "Inscrivez-vous, remplissez votre formulaire médical et prenez rendez-vous dans un centre proche de chez vous.",
+    icon: Heart,
+    color: "from-red-600 to-red-700",
+    badge: "bg-red-100 text-red-800",
+    href: "/register",
+    cta: "S'inscrire comme donneur",
+  },
+  {
+    label: "Centre de Transfusion",
+    desc: "Gérez la collecte, le stock de poches et les demandes des établissements de santé.",
+    icon: Activity,
+    color: "from-blue-600 to-blue-700",
+    badge: "bg-blue-100 text-blue-800",
+    href: "/login",
+    cta: "Accéder au centre",
+  },
+  {
+    label: "Banque de Sang",
+    desc: "Supervisez la réception des poches de sang, gérez les alertes de pénurie et suivez les stocks.",
+    icon: Shield,
+    color: "from-purple-600 to-purple-700",
+    badge: "bg-purple-100 text-purple-800",
+    href: "/login",
+    cta: "Accéder à la banque",
+  },
+  {
+    label: "Hôpital",
+    desc: "Soumettez des demandes de sang au centre de transfusion et suivez vos livraisons en temps réel.",
+    icon: Building2,
+    color: "from-green-600 to-green-700",
+    badge: "bg-green-100 text-green-800",
+    href: "/login",
+    cta: "Accéder à l'hôpital",
+  },
+  {
+    label: "Clinique",
+    desc: "Faites des demandes de sang, suivez les livraisons et gérez le paiement de vos factures en ligne.",
+    icon: Users,
+    color: "from-teal-600 to-teal-700",
+    badge: "bg-teal-100 text-teal-800",
+    href: "/login",
+    cta: "Accéder à la clinique",
+  },
+];
 
 function AnimatedCounter({ target, duration = 2000 }: { target: number; duration?: number }) {
   const [count, setCount] = useState(0);
@@ -32,6 +79,25 @@ function AnimatedCounter({ target, duration = 2000 }: { target: number; duration
   return <span ref={ref}>{count.toLocaleString()}</span>;
 }
 
+function ClipboardList(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+      <path d="M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      <path d="M9 12h6M9 16h6" />
+    </svg>
+  );
+}
+
+function Calendar(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  );
+}
+
 export default function Landing() {
   const { data: stats } = useGetBloodStats();
 
@@ -46,7 +112,8 @@ export default function Landing() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-white/60 text-sm hidden sm:block">Plateforme nationale — Tunisie</span>
-            <Link href="/login" className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            <Link href="/login"
+              className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
               Connexion
             </Link>
           </div>
@@ -57,13 +124,10 @@ export default function Landing() {
       <section className="relative min-h-screen flex items-center bg-sidebar pt-16 overflow-hidden">
         <div className="absolute inset-0 overflow-hidden">
           {[...Array(6)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute rounded-full bg-primary/10"
+            <motion.div key={i} className="absolute rounded-full bg-primary/10"
               style={{ width: 100 + i * 80, height: 100 + i * 80, left: `${10 + i * 15}%`, top: `${20 + (i % 3) * 25}%` }}
               animate={{ y: [0, -20, 0], opacity: [0.3, 0.6, 0.3] }}
-              transition={{ duration: 3 + i, repeat: Infinity, delay: i * 0.5 }}
-            />
+              transition={{ duration: 3 + i, repeat: Infinity, delay: i * 0.5 }} />
           ))}
         </div>
         <div className="relative max-w-7xl mx-auto px-6 py-20">
@@ -93,14 +157,7 @@ export default function Landing() {
                   <motion.span whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                     className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3.5 rounded-xl font-semibold text-base transition-colors border border-white/20 cursor-pointer">
                     <Shield className="w-5 h-5" />
-                    Établissement de santé
-                  </motion.span>
-                </Link>
-                <Link href="/login">
-                  <motion.span whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                    className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3.5 rounded-xl font-semibold text-base transition-colors border border-white/20 cursor-pointer">
-                    <Users className="w-5 h-5" />
-                    Centre de sang
+                    Espace établissement
                   </motion.span>
                 </Link>
               </div>
@@ -113,9 +170,7 @@ export default function Landing() {
                   className="aspect-square rounded-2xl flex flex-col items-center justify-center"
                   style={{ background: `${BT_COLORS[bt]}22`, border: `1px solid ${BT_COLORS[bt]}44` }}>
                   <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-sm mb-2" style={{ background: BT_COLORS[bt] }}>{bt}</div>
-                  <div className="text-white/60 text-xs">
-                    {stats?.stats?.find(s => s.bloodType === bt)?.donorCount || "—"} donneurs
-                  </div>
+                  <div className="text-white/60 text-xs">{stats?.stats?.find(s => s.bloodType === bt)?.donorCount || "—"} donneurs</div>
                 </motion.div>
               ))}
             </motion.div>
@@ -134,8 +189,7 @@ export default function Landing() {
               { label: "Vies sauvées", value: 11673, suffix: "+" },
             ].map((stat, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                className="text-center">
+                viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="text-center">
                 <div className="text-4xl font-black text-primary mb-1">
                   <AnimatedCounter target={stat.value} />{stat.suffix}
                 </div>
@@ -146,8 +200,42 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Blood type counters */}
+      {/* Role selection */}
       <section className="py-20 bg-background">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-foreground mb-3">Votre espace sur BloodLink</h2>
+            <p className="text-muted-foreground">Sélectionnez votre profil pour accéder à votre espace dédié</p>
+          </motion.div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {ROLES.map((role, i) => (
+              <motion.div key={role.label}
+                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ delay: i * 0.07 }}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}>
+                <Link href={role.href}
+                  className="group flex flex-col h-full bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:border-primary/30 transition-all text-left">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${role.color} flex items-center justify-center mb-4`}>
+                    <role.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-semibold self-start mb-3 ${role.badge}`}>
+                    {role.label}
+                  </span>
+                  <p className="text-sm text-muted-foreground leading-relaxed flex-1">{role.desc}</p>
+                  <div className="flex items-center gap-2 text-primary text-sm font-medium mt-4 group-hover:gap-3 transition-all">
+                    {role.cta}
+                    <ArrowRight className="w-4 h-4" />
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Blood type counters */}
+      <section className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
             className="text-center mb-12">
@@ -195,8 +283,7 @@ export default function Landing() {
               { icon: Heart, title: "Donner du sang", desc: "Rendez-vous au centre à l'heure choisie et sauvez jusqu'à 3 vies avec votre don." },
             ].map((step, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                className="text-center">
+                viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="text-center">
                 <div className="w-14 h-14 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-primary/30">
                   <step.icon className="w-7 h-7 text-primary" />
                 </div>
@@ -216,10 +303,12 @@ export default function Landing() {
             <h2 className="text-4xl font-black text-white mb-4">Prêt à sauver des vies ?</h2>
             <p className="text-white/80 text-lg mb-8">Rejoignez des milliers de donneurs tunisiens et faites la différence aujourd'hui.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/register" className="bg-white text-primary px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/90 transition-colors inline-block">
+              <Link href="/register"
+                className="bg-white text-primary px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/90 transition-colors inline-block">
                 Devenir donneur
               </Link>
-              <Link href="/login" className="border-2 border-white text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/10 transition-colors inline-block">
+              <Link href="/login"
+                className="border-2 border-white text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/10 transition-colors inline-block">
                 Se connecter
               </Link>
             </div>
@@ -241,24 +330,5 @@ export default function Landing() {
         </div>
       </footer>
     </div>
-  );
-}
-
-// Needed for import in Layout
-function ClipboardList(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
-      <path d="M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-      <path d="M9 12h6M9 16h6" />
-    </svg>
-  );
-}
-function Calendar(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
   );
 }

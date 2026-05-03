@@ -12,11 +12,30 @@ const BLOOD_TYPE_COLORS: Record<string, string> = {
   "O-": "bg-green-300 text-green-900",
 };
 
-export function BloodTypeBadge({ type, size = "md" }: { type: string; size?: "sm" | "md" | "lg" }) {
-  const sizes = { sm: "w-8 h-8 text-xs", md: "w-12 h-12 text-sm font-bold", lg: "w-16 h-16 text-lg font-bold" };
+export function BloodTypeBadge({
+  type,
+  bloodType,
+  size = "md",
+}: {
+  type?: string;
+  bloodType?: string;
+  size?: "sm" | "md" | "lg";
+}) {
+  const value = bloodType || type || "";
+  const sizes = {
+    sm: "w-8 h-8 text-xs",
+    md: "w-12 h-12 text-sm font-bold",
+    lg: "w-16 h-16 text-lg font-bold",
+  };
   return (
-    <div className={cn("rounded-full flex items-center justify-center font-semibold shrink-0", BLOOD_TYPE_COLORS[type] || "bg-gray-200 text-gray-700", sizes[size])}>
-      {type}
+    <div
+      className={cn(
+        "rounded-full flex items-center justify-center font-semibold shrink-0",
+        BLOOD_TYPE_COLORS[value] || "bg-gray-200 text-gray-700",
+        sizes[size]
+      )}
+    >
+      {value}
     </div>
   );
 }

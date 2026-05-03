@@ -23,13 +23,21 @@ import CenterStock from "@/pages/center/Stock";
 import CenterRequests from "@/pages/center/Requests";
 import CenterDeliveries from "@/pages/center/Deliveries";
 import CenterAlerts from "@/pages/center/Alerts";
+import HospitalDashboard from "@/pages/hospital/Dashboard";
+import HospitalRequest from "@/pages/hospital/Request";
+import HospitalTracking from "@/pages/hospital/Tracking";
+import HospitalNotifications from "@/pages/hospital/Notifications";
+import ClinicDashboard from "@/pages/clinic/Dashboard";
+import ClinicRequest from "@/pages/clinic/Request";
+import ClinicTracking from "@/pages/clinic/Tracking";
+import ClinicInvoices from "@/pages/clinic/Invoices";
+import ClinicNotifications from "@/pages/clinic/Notifications";
 import EstablishmentDashboard from "@/pages/establishment/Dashboard";
 import EstablishmentRequest from "@/pages/establishment/Request";
 import EstablishmentTracking from "@/pages/establishment/Tracking";
 import EstablishmentInvoices from "@/pages/establishment/Invoices";
 import NotFound from "@/pages/not-found";
 
-// Configure auth token getter for API client
 setAuthTokenGetter(() => localStorage.getItem("bl_token"));
 
 const queryClient = new QueryClient({
@@ -109,7 +117,38 @@ function AppRoutes() {
         <ProtectedRoute roles={["transfusion_center", "blood_bank"]}><CenterAlerts /></ProtectedRoute>
       </Route>
 
-      {/* Establishment */}
+      {/* Hospital (dedicated routes) */}
+      <Route path="/hospital/dashboard">
+        <ProtectedRoute roles={["hospital"]}><HospitalDashboard /></ProtectedRoute>
+      </Route>
+      <Route path="/hospital/request">
+        <ProtectedRoute roles={["hospital"]}><HospitalRequest /></ProtectedRoute>
+      </Route>
+      <Route path="/hospital/tracking">
+        <ProtectedRoute roles={["hospital"]}><HospitalTracking /></ProtectedRoute>
+      </Route>
+      <Route path="/hospital/notifications">
+        <ProtectedRoute roles={["hospital"]}><HospitalNotifications /></ProtectedRoute>
+      </Route>
+
+      {/* Clinic (dedicated routes) */}
+      <Route path="/clinic/dashboard">
+        <ProtectedRoute roles={["clinic"]}><ClinicDashboard /></ProtectedRoute>
+      </Route>
+      <Route path="/clinic/request">
+        <ProtectedRoute roles={["clinic"]}><ClinicRequest /></ProtectedRoute>
+      </Route>
+      <Route path="/clinic/tracking">
+        <ProtectedRoute roles={["clinic"]}><ClinicTracking /></ProtectedRoute>
+      </Route>
+      <Route path="/clinic/invoices">
+        <ProtectedRoute roles={["clinic"]}><ClinicInvoices /></ProtectedRoute>
+      </Route>
+      <Route path="/clinic/notifications">
+        <ProtectedRoute roles={["clinic"]}><ClinicNotifications /></ProtectedRoute>
+      </Route>
+
+      {/* Legacy establishment routes — keep for backward compat */}
       <Route path="/establishment/dashboard">
         <ProtectedRoute roles={["hospital", "clinic"]}><EstablishmentDashboard /></ProtectedRoute>
       </Route>

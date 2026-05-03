@@ -22,9 +22,10 @@ type FormData = z.infer<typeof schema>;
 
 const DEMO_ACCOUNTS = [
   { label: "Donneur", email: "ahmed.ben@demo.tn", password: "demo123", color: "bg-red-100 text-red-700 border-red-200" },
-  { label: "Centre de transfusion", email: "centre@cnts.tn", password: "demo123", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  { label: "Banque de sang", email: "banque@blood.tn", password: "demo123", color: "bg-teal-100 text-teal-700 border-teal-200" },
-  { label: "Clinique", email: "clinique@sante.tn", password: "demo123", color: "bg-purple-100 text-purple-700 border-purple-200" },
+  { label: "Centre Transfusion", email: "centre@cnts.tn", password: "demo123", color: "bg-blue-100 text-blue-700 border-blue-200" },
+  { label: "Banque de Sang", email: "banque@blood.tn", password: "demo123", color: "bg-purple-100 text-purple-700 border-purple-200" },
+  { label: "Hôpital", email: "hopital@sante.tn", password: "demo123", color: "bg-green-100 text-green-700 border-green-200" },
+  { label: "Clinique", email: "clinique@sante.tn", password: "demo123", color: "bg-teal-100 text-teal-700 border-teal-200" },
 ];
 
 export default function Login() {

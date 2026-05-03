@@ -5,7 +5,6 @@ import { Heart, Calendar, FileText, Bell, CheckCircle, Clock, XCircle, TrendingU
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { Layout } from "@/components/Layout";
 import { BloodTypeBadge } from "@/components/BloodTypeBadge";
 import { useGetDonorDashboard, useGetCurrentUser, useListDonations } from "@workspace/api-client-react";
@@ -18,13 +17,20 @@ const STATUS_CONFIG = {
 
 export default function DonorDashboard() {
   const { data: dashboard, isLoading } = useGetDonorDashboard();
-  const { data: user } = useGetCurrentUser();
+  const { data: userData } = useGetCurrentUser();
   const { data: donationsData } = useListDonations({});
 
+  const user = userData as any;
   const status = dashboard?.eligibilityStatus || "eligible";
   const statusConfig = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.eligible;
   const StatusIcon = statusConfig.icon;
   const lastDonation = donationsData?.donations?.[0];
+
+  const gender = user?.gender || "male";
+  const annualQuota = gender === "female" ? 3 : 5;
+  const annualDonations = dashboard?.annualDonations || 0;
+  const remaining = Math.max(0, annualQuota - annualDonations);
+  const isQuotaReached = annualDonations >= annualQuota;
 
   const quickActions = [
     { href: "/donor/appointments", label: "Prendre rendez-vous", icon: Calendar, desc: "Réserver un créneau" },
@@ -37,31 +43,40 @@ export default function DonorDashboard() {
     <Layout>
       <div className="p-6 max-w-5xl mx-auto space-y-6">
         {/* Welcome */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Bonjour, {(user as any)?.firstName || "Donneur"} 👋</h1>
-          <p className="text-muted-foreground mt-1">Voici votre espace personnel BloodLink</p>
-          {user?.bloodType ? <div className="mt-3"><BloodTypeBadge bloodType={user.bloodType} /></div> : null}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Bonjour, {user?.firstName || "Donneur"} 👋</h1>
+            <p className="text-muted-foreground mt-1">Voici votre espace personnel BloodLink</p>
+          </div>
+          {user?.bloodType && (
+            <BloodTypeBadge bloodType={user.bloodType} />
+          )}
         </div>
 
         {/* Status card */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           className={`rounded-2xl border-2 p-6 ${statusConfig.bg}`}>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${statusConfig.bg} border ${statusConfig.color.replace("text-", "border-").replace("-600", "-300")}`}>
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center bg-white/60`}>
               <StatusIcon className={`w-8 h-8 ${statusConfig.color}`} />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-1 flex-wrap">
                 <h2 className="text-lg font-bold text-foreground">Statut d'éligibilité</h2>
                 <span className={`px-3 py-1 rounded-full text-sm font-bold ${statusConfig.badge}`}>{statusConfig.label}</span>
+                {isQuotaReached && status === "eligible" && (
+                  <span className="px-3 py-1 rounded-full text-sm font-bold bg-orange-100 text-orange-800">Quota annuel atteint</span>
+                )}
               </div>
               {dashboard?.nextDonationDate && status !== "eligible" ? (
                 <p className="text-sm text-muted-foreground">Prochaine date possible : <strong>{new Date(dashboard.nextDonationDate).toLocaleDateString("fr-TN")}</strong></p>
-              ) : status === "eligible" ? (
+              ) : status === "eligible" && !isQuotaReached ? (
                 <p className="text-sm text-green-700 font-medium">Vous pouvez donner votre sang dès maintenant !</p>
+              ) : isQuotaReached ? (
+                <p className="text-sm text-orange-700 font-medium">Vous avez atteint votre quota annuel de {annualQuota} dons ({gender === "female" ? "femme" : "homme"}).</p>
               ) : null}
             </div>
-            {status === "eligible" && (
+            {status === "eligible" && !isQuotaReached && (
               <Link href="/donor/appointments">
                 <Button className="bg-green-600 hover:bg-green-700 text-white shrink-0">Prendre rendez-vous</Button>
               </Link>
@@ -74,8 +89,16 @@ export default function DonorDashboard() {
           {[
             { label: "Total des dons", value: dashboard?.totalDonations || 0, icon: Heart, color: "text-red-500", bg: "bg-red-50" },
             { label: "Alertes non lues", value: dashboard?.unreadAlerts || 0, icon: Bell, color: "text-orange-500", bg: "bg-orange-50" },
-            { label: "Quota annuel", value: `${dashboard?.annualDonations || 0}/${dashboard?.annualQuota || 5}`, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-50" },
-              { label: "Dernier don", value: lastDonation?.date ? new Date(lastDonation.date).toLocaleDateString("fr-TN", { day: "2-digit", month: "short" }) : dashboard?.lastDonationDate ? new Date(dashboard.lastDonationDate).toLocaleDateString("fr-TN", { day: "2-digit", month: "short" }) : "—", icon: Calendar, color: "text-green-500", bg: "bg-green-50" },
+            { label: "Quota annuel", value: `${annualDonations}/${annualQuota}`, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-50" },
+            {
+              label: "Dernier don",
+              value: lastDonation?.date
+                ? new Date(lastDonation.date).toLocaleDateString("fr-TN", { day: "2-digit", month: "short" })
+                : dashboard?.lastDonationDate
+                  ? new Date(dashboard.lastDonationDate).toLocaleDateString("fr-TN", { day: "2-digit", month: "short" })
+                  : "—",
+              icon: Calendar, color: "text-green-500", bg: "bg-green-50"
+            },
           ].map((stat, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
               <Card className="hover:shadow-md transition-shadow">
@@ -97,21 +120,30 @@ export default function DonorDashboard() {
             <CardTitle className="text-base flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-primary" />
               Quota annuel de dons
+              <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${gender === "female" ? "bg-pink-100 text-pink-800" : "bg-blue-100 text-blue-800"}`}>
+                {gender === "female" ? "♀ Femme — 3 dons/an max" : "♂ Homme — 5 dons/an max"}
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4 mb-3">
               <div className="flex-1">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">{dashboard?.annualDonations || 0} dons effectués</span>
-                  <span className="font-semibold text-foreground">{dashboard?.annualQuota || 5} max / an</span>
+                  <span className="text-muted-foreground">{annualDonations} dons effectués</span>
+                  <span className="font-semibold text-foreground">{annualQuota} max / an</span>
                 </div>
-                <Progress value={((dashboard?.annualDonations || 0) / (dashboard?.annualQuota || 5)) * 100} className="h-3" />
+                <Progress value={(annualDonations / annualQuota) * 100} className="h-3" />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Il vous reste <strong>{(dashboard?.annualQuota || 5) - (dashboard?.annualDonations || 0)}</strong> dons possibles cette année.
-            </p>
+            {remaining > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Il vous reste <strong>{remaining}</strong> don(s) possible(s) cette année.
+              </p>
+            ) : (
+              <p className="text-xs text-orange-700 font-medium">
+                Vous avez atteint votre quota annuel de dons. Votre prochain don sera possible en janvier {new Date().getFullYear() + 1}.
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -121,7 +153,7 @@ export default function DonorDashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {quickActions.map((action, i) => (
               <Link key={i} href={action.href}>
-                <motion.a whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                   className="block bg-card border border-border rounded-xl p-4 hover:shadow-md hover:border-primary/40 transition-all cursor-pointer relative">
                   {action.badge ? (
                     <span className="absolute top-3 right-3 w-5 h-5 bg-primary text-white text-[10px] rounded-full flex items-center justify-center font-bold">
@@ -133,7 +165,7 @@ export default function DonorDashboard() {
                   </div>
                   <div className="font-semibold text-sm text-foreground">{action.label}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">{action.desc}</div>
-                </motion.a>
+                </motion.div>
               </Link>
             ))}
           </div>

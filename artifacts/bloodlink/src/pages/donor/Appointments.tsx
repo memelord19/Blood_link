@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Calendar, Clock, MapPin, CheckCircle, XCircle, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Layout } from "@/components/Layout";
 import { useGetAvailableSlots, useCreateAppointment, useListAppointments, useUpdateAppointment } from "@workspace/api-client-react";
 import { toast } from "sonner";
@@ -21,6 +22,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function DonorAppointments() {
   const [showBooking, setShowBooking] = useState(false);
+  const [selectedCenterId, setSelectedCenterId] = useState<string>("all");
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
   const { data: slotsData } = useGetAvailableSlots({});
   const { data: apptData, refetch } = useListAppointments({});
@@ -29,9 +31,16 @@ export default function DonorAppointments() {
 
   const slots = slotsData?.slots || [];
   const appointments = apptData?.appointments || [];
+  const centers = useMemo(() => {
+    const map = new Map<string, string>();
+    slots.forEach((slot: any) => {
+      if (slot.centerId && slot.centerName) map.set(String(slot.centerId), slot.centerName);
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [slots]);
 
-  // Group slots by date
-  const slotsByDate = slots.reduce((acc: Record<string, typeof slots>, slot) => {
+  const filteredSlots = selectedCenterId === "all" ? slots : slots.filter((slot: any) => String(slot.centerId) === selectedCenterId);
+  const slotsByDate = filteredSlots.reduce((acc: Record<string, typeof filteredSlots>, slot: any) => {
     acc[slot.date] = acc[slot.date] || [];
     acc[slot.date].push(slot);
     return acc;
@@ -71,12 +80,28 @@ export default function DonorAppointments() {
           </Button>
         </div>
 
-        {/* Booking section */}
         {showBooking && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
             <Card>
-              <CardHeader><CardTitle className="text-base">Choisir un créneau</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="text-base">Choisir un centre et un créneau</CardTitle>
+              </CardHeader>
               <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Centre de don</label>
+                  <Select value={selectedCenterId} onValueChange={(value) => { setSelectedCenterId(value); setSelectedSlot(null); }}>
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue placeholder="Sélectionner un centre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les centres</SelectItem>
+                      {centers.map(center => (
+                        <SelectItem key={center.id} value={center.id}>{center.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="overflow-x-auto">
                   <div className="flex gap-3 pb-2" style={{ minWidth: "max-content" }}>
                     {dates.map(date => {
@@ -89,7 +114,7 @@ export default function DonorAppointments() {
                           </div>
                           <div className="space-y-1">
                             {daySlots.slice(0, 4).map((slot: any, i: number) => (
-                              <button key={i} onClick={() => setSelectedSlot(slot)}
+                              <button key={i} type="button" onClick={() => setSelectedSlot(slot)}
                                 className={`w-full text-xs py-2 px-2 rounded-lg border transition-colors font-medium ${selectedSlot?.date === slot.date && selectedSlot?.time === slot.time && selectedSlot?.centerId === slot.centerId ? "bg-primary text-white border-primary" : "bg-background hover:border-primary/50 border-border text-foreground"}`}>
                                 {slot.time}
                               </button>
@@ -100,6 +125,13 @@ export default function DonorAppointments() {
                     })}
                   </div>
                 </div>
+
+                {!selectedCenterId || selectedCenterId === "all" ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+                    Sélectionnez un centre pour afficher ses créneaux disponibles.
+                  </div>
+                ) : null}
+
                 {selectedSlot && (
                   <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
                     <p className="text-sm font-semibold text-foreground mb-1">Créneau sélectionné :</p>
@@ -112,12 +144,17 @@ export default function DonorAppointments() {
                     </Button>
                   </div>
                 )}
+
+                {!selectedSlot && selectedCenterId !== "all" && (
+                  <div className="text-sm text-muted-foreground bg-muted/30 rounded-xl p-4">
+                    Aucun créneau sélectionné pour ce centre.
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
         )}
 
-        {/* Existing appointments */}
         <Card>
           <CardHeader><CardTitle className="text-base">Mes rendez-vous</CardTitle></CardHeader>
           <CardContent>

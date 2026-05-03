@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Layout } from "@/components/Layout";
 import { BloodTypeBadge } from "@/components/BloodTypeBadge";
-import { useGetDonorDashboard, useGetCurrentUser } from "@workspace/api-client-react";
+import { useGetDonorDashboard, useGetCurrentUser, useListDonations } from "@workspace/api-client-react";
 
 const STATUS_CONFIG = {
   eligible: { label: "Éligible", icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 border-green-200", badge: "bg-green-100 text-green-800" },
@@ -19,10 +19,12 @@ const STATUS_CONFIG = {
 export default function DonorDashboard() {
   const { data: dashboard, isLoading } = useGetDonorDashboard();
   const { data: user } = useGetCurrentUser();
+  const { data: donationsData } = useListDonations({});
 
   const status = dashboard?.eligibilityStatus || "eligible";
   const statusConfig = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.eligible;
   const StatusIcon = statusConfig.icon;
+  const lastDonation = donationsData?.donations?.[0];
 
   const quickActions = [
     { href: "/donor/appointments", label: "Prendre rendez-vous", icon: Calendar, desc: "Réserver un créneau" },
@@ -38,6 +40,7 @@ export default function DonorDashboard() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Bonjour, {(user as any)?.firstName || "Donneur"} 👋</h1>
           <p className="text-muted-foreground mt-1">Voici votre espace personnel BloodLink</p>
+          {user?.bloodType ? <div className="mt-3"><BloodTypeBadge bloodType={user.bloodType} /></div> : null}
         </div>
 
         {/* Status card */}
@@ -72,7 +75,7 @@ export default function DonorDashboard() {
             { label: "Total des dons", value: dashboard?.totalDonations || 0, icon: Heart, color: "text-red-500", bg: "bg-red-50" },
             { label: "Alertes non lues", value: dashboard?.unreadAlerts || 0, icon: Bell, color: "text-orange-500", bg: "bg-orange-50" },
             { label: "Quota annuel", value: `${dashboard?.annualDonations || 0}/${dashboard?.annualQuota || 5}`, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-50" },
-            { label: "Dernier don", value: dashboard?.lastDonationDate ? new Date(dashboard.lastDonationDate).toLocaleDateString("fr-TN", { day: "2-digit", month: "short" }) : "—", icon: Calendar, color: "text-green-500", bg: "bg-green-50" },
+              { label: "Dernier don", value: lastDonation?.date ? new Date(lastDonation.date).toLocaleDateString("fr-TN", { day: "2-digit", month: "short" }) : dashboard?.lastDonationDate ? new Date(dashboard.lastDonationDate).toLocaleDateString("fr-TN", { day: "2-digit", month: "short" }) : "—", icon: Calendar, color: "text-green-500", bg: "bg-green-50" },
           ].map((stat, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
               <Card className="hover:shadow-md transition-shadow">

@@ -49,9 +49,9 @@ export default function DonorNotifications() {
         </div>
         {n.type === "shortage_alert" && !n.read && (
           <Link href="/donor/appointments">
-            <a className="shrink-0 text-xs bg-primary text-white px-3 py-1.5 rounded-lg font-medium hover:bg-primary/90 transition-colors" onClick={e => e.stopPropagation()}>
+            <span className="shrink-0 text-xs bg-primary text-white px-3 py-1.5 rounded-lg font-medium hover:bg-primary/90 transition-colors" onClick={e => e.stopPropagation()}>
               RDV
-            </a>
+            </span>
           </Link>
         )}
       </motion.div>

@@ -1,0 +1,235 @@
+Here is the updated prompt with the hospital entity explicitly added throughout:
+
+---
+
+**PROMPT DE CORRECTIONS — BloodLink (Updated)**
+
+---
+
+You are working on an existing React + TypeScript frontend for **BloodLink**, a blood bank management platform. The project structure uses Wouter for routing, Framer Motion, TanStack Query, and shadcn/ui components. Below is a comprehensive list of corrections and missing features to implement, based on the official project specifications.
+
+---
+
+### 1. LANDING PAGE — Missing & incorrect elements
+
+- **Add a role selection section** with five distinct cards on the landing page: "Je suis Donneur", "Je suis un Hôpital", "Je suis une Clinique", "Je suis un Centre de Transfusion", "Je suis une Banque de Sang". Each card must redirect to the login page with a pre-selected role parameter.
+- **Add blood type statistics** displayed as animated counters (e.g. current stock levels per blood type: A+, B+, O-, etc.).
+- **Add a "How it works" section** explaining the 4 process phases from the report: Enrôlement → Qualification & Stockage → Demande & Approvisionnement → Gestion des urgences.
+- **Add a footer** with BloodLink branding, contact info (Rue Elkhawarezmi, La Marsa, Tunisia), and legal mentions.
+
+---
+
+### 2. AUTHENTICATION — Role-based routing fix
+
+- After login, **redirect each user to their correct role-specific dashboard** based on their `role` field returned by the API:
+  - `donor` → `/donor/dashboard`
+  - `transfusion_center` → `/center/dashboard` (with Transfusion Center-specific sidebar)
+  - `blood_bank` → `/center/dashboard` (with Blood Bank-specific sidebar)
+  - `hospital` → `/hospital/dashboard` ← **dedicated route, NOT shared with clinic**
+  - `clinic` → `/clinic/dashboard` ← **dedicated route, NOT shared with hospital**
+- The **login page must show a role selector** (dropdown or tabs: Donneur / Centre de Transfusion / Banque de Sang / Hôpital / Clinique) so the system can display the correct interface after authentication.
+
+---
+
+### 3. HOSPITAL ENTITY — Full implementation (currently missing)
+
+**This entity is entirely absent from the current codebase and must be built from scratch.**
+
+Create the following dedicated pages under `/hospital/`:
+
+- **`/hospital/dashboard`** — Shows:
+  - Summary cards: active requests count, pending deliveries, urgent requests highlighted in red
+  - Step-by-step status tracker for the 3 most recent requests
+  - Quick action button: "Nouvelle demande de sang"
+  - Internal blood bank stock summary panel (if the hospital has an internal blood bank — controlled by a boolean flag `hasInternalBloodBank` from the API). If yes, show a mini stock overview by blood type. If no, display: *"Cet hôpital ne dispose pas d'une banque de sang interne. Les demandes sont transmises directement au centre de transfusion."*
+
+- **`/hospital/request`** — Blood request form:
+  - Fields: Groupe sanguin (selector), Facteur Rhésus (+ / -), Volume requis (in mL), Degré d'urgence (Normal / Urgent / Critique with color indicators)
+  - **Routing logic message** displayed below the form before submission:
+    - If `hasInternalBloodBank = true`: *"Votre demande sera d'abord transmise à votre banque de sang interne. En cas de stock insuffisant, elle sera automatiquement redirigée vers le centre de transfusion."*
+    - If `hasInternalBloodBank = false`: *"Votre demande sera transmise directement au centre de transfusion."*
+  - On submission, show a success toast: *"Demande enregistrée avec succès."*
+
+- **`/hospital/tracking`** — Request tracking page:
+  - Table listing all submitted requests with columns: ID demande, Groupe sanguin, Volume, Urgence, Date, Statut
+  - Statut displayed as a colored badge: En attente (gray) / En traitement (blue) / Acceptée (green) / Expédiée (orange) / Livrée (green checkmark)
+  - Clicking a row opens a detail panel showing a **horizontal stepper**: Soumise → En traitement → Acceptée → Expédiée → Livrée, with the current step highlighted
+  - When status is "Livrée", display: *"La traçabilité de cette demande est finalisée."*
+
+- **`/hospital/notifications`** — Notification feed:
+  - Shows alerts about request status changes, shortage alerts relevant to the hospital's region, and delivery confirmations
+  - Each notification has a timestamp and a "Marquer comme lu" button
+
+**Hospital sidebar menu** must include:
+- Tableau de bord
+- Nouvelle demande de sang
+- Suivi des demandes
+- Notifications
+- *(No invoice payment — hospitals are not billed unlike clinics)*
+
+**Hospital navbar badge**: green badge labeled "Hôpital"
+
+---
+
+### 4. CLINIC ENTITY — Corrections & separation from Hospital
+
+The clinic interface must now be fully **separated from the hospital** into its own dedicated routes under `/clinic/`:
+
+- **`/clinic/dashboard`** — Same as hospital dashboard but:
+  - No internal blood bank panel (clinics never have internal blood banks — always route directly to transfusion center)
+  - Add an **"Impayés"** warning banner if there are unpaid invoices: *"⚠ Vous avez [N] facture(s) impayée(s). Veuillez régulariser votre situation pour continuer à soumettre des demandes."*
+  - Disable the "Nouvelle demande" button if there are unpaid non-urgent invoices
+
+- **`/clinic/request`** — Same fields as hospital but always shows: *"Votre demande sera transmise directement au centre de transfusion."* with no routing logic toggle
+
+- **`/clinic/tracking`** — Same as hospital tracking
+
+- **`/clinic/invoices`** — Invoice payment page (clinic-exclusive):
+  - Pending invoices list with: ID facture, Date, Montant (TND), Statut (En attente / Réglée / Refusée)
+  - "Payer" button per pending invoice, opening a VISA payment modal with fields: Numéro de carte (16 digits, formatted as XXXX XXXX XXXX XXXX), Date d'expiration (MM/YY), CVV (3 digits, masked), Nom du titulaire
+  - On payment success: update invoice status to "Réglée", show: *"Paiement accepté. Votre demande est en cours de livraison."*
+  - On payment failure: show: *"Transaction refusée. Veuillez vérifier vos coordonnées bancaires ou utiliser un autre moyen de paiement."*
+  - For urgent unpaid requests: display a **"Livraison d'urgence — Paiement différé"** orange badge. Allow delivery to proceed and generate a deferred invoice entry.
+
+- **`/clinic/notifications`** — Same as hospital notifications
+
+**Clinic sidebar menu** must include:
+- Tableau de bord
+- Nouvelle demande de sang
+- Suivi des demandes
+- Paiement des factures ← *clinic-exclusive*
+- Notifications
+
+**Clinic navbar badge**: teal badge labeled "Clinique"
+
+---
+
+### 5. DONOR REGISTRATION PAGE — Missing charter & fields
+
+- After form completion, **display the full BloodLink donor charter** in a scrollable modal before account creation is confirmed.
+- **Block form submission** if the charter checkbox is not checked. Show error: *"Vous devez accepter la charte pour vous inscrire."*
+- Add missing fields: **CIN**, **Poids** (weight in kg), **Région** (Tunisian regions dropdown), **Groupe sanguin** (blood type selector: A+, A-, B+, B-, AB+, AB-, O+, O-), **Sexe** (Homme / Femme — required for quota calculation).
+- Add **eligibility pre-check warning**: if age < 18 or > 65, or weight ≤ 50kg, show an inline warning that the donor may not be eligible.
+
+---
+
+### 6. DONOR DASHBOARD — Corrections
+
+- The **annual quota** must be gender-sensitive: max 5 donations/year for men, max 3 for women. Currently hardcoded to 5 for all — fix this.
+- Add a **blood type badge** prominently displayed in the welcome header next to the donor's name.
+- The **"Prendre rendez-vous" CTA button** must be disabled with a tooltip when status is `temporarily_excluded` or `permanently_ineligible`.
+
+---
+
+### 7. DONOR — MEDICAL FORM PAGE — Corrections
+
+Add the following missing fields:
+
+- Current medications (yes/no + details text field)
+- Recent surgery in the last 6 months (yes/no + type)
+- Recent travel to endemic zones (yes/no + country + date)
+- Recent invasive dental care (yes/no + date)
+- Known transmissible diseases: HIV, Hepatitis B, Hepatitis C, Syphilis (checkboxes)
+- Last donation date (date picker)
+
+Upon submission, display one of three results:
+- ✅ **Éligible** — green card + "Vous pouvez prendre un rendez-vous"
+- ⏳ **Temporairement exclu** — orange card with reason and next eligible date
+- ❌ **Définitivement inapte** — red card with reason
+
+---
+
+### 8. DONOR — APPOINTMENTS PAGE — Corrections
+
+- Add a **center selection dropdown** (by region) before showing available slots.
+- Unavailable slots must be **grayed out and non-clickable** in the calendar.
+- Add an **"Annuler" button** on confirmed upcoming appointments with a confirmation dialog.
+
+---
+
+### 9. DONOR — NOTIFICATIONS PAGE — Corrections
+
+- Split into **two tabs**:
+  - **"Alertes de pénurie"**: blood type badge, region, urgency, message, timestamp, + "Répondre — Prendre RDV" button
+  - **"Autres notifications"**: eligibility reminders, confirmations, announcements
+- Mark as read on click, show unread count badge on tab label.
+
+---
+
+### 10. CENTER DASHBOARD — Blood Transfusion Center vs Blood Bank differentiation
+
+**Blood Transfusion Center** sidebar:
+- Tableau de bord
+- Inscrire un Donneur
+- Historique des Dons
+- Gestion des Rendez-vous
+- Enregistrer Approvisionnement
+- Vérifier Stock
+- Consulter Demandes Établissements
+- Suivre les Livraisons ← *Transfusion Center only*
+- Alertes reçues ← *Transfusion Center only*
+- Envoyer Notifications aux Donneurs
+
+**Blood Bank** sidebar:
+- Tableau de bord
+- Inscrire un Donneur
+- Historique des Dons
+- Gestion des Rendez-vous
+- Enregistrer Approvisionnement
+- Enregistrer Réception de Poches ← *Blood Bank only*
+- Vérifier Stock
+- Envoyer Alertes ← *Blood Bank only*
+- Consulter Demandes Établissements
+
+---
+
+### 11. CENTER — STOCK PAGE — Corrections
+
+- Three independent filter dropdowns: Groupe sanguin, Région, Date. Filters must combine.
+- Bags expiring within 7 days: **orange highlighted row** with warning icon.
+- Critical stock triggers a **red alert banner** at page top.
+- **Color-coded progress bars** per blood type: green (ok) / orange (warning) / red (critical).
+
+---
+
+### 12. CENTER — SUPPLY REGISTRATION — Corrections
+
+- **Barcode scanner input** auto-fills bag fields on submit.
+- **Duplicate detection**: block and warn if barcode already exists.
+- **Double-entry validation**: user must enter blood type twice to confirm (transfusion safety requirement from the report).
+
+---
+
+### 13. CENTER — BLOOD BAG RECEPTION PAGE (Blood Bank only) — Corrections
+
+- **Physical inspection checklist** (both must be checked to enable Accept button):
+  - Température de conservation conforme
+  - Intégrité physique de la poche vérifiée
+- On rejection: mandatory rejection reason field (Température non conforme / Poche endommagée / Code-barres non reconnu / Autre).
+- On success: *"Poche enregistrée avec succès. Stock mis à jour."*
+
+---
+
+### 14. CENTER — SHORTAGE ALERT PAGE (Blood Bank) — Corrections
+
+- Manual alert form: blood type, region, urgency level, free-text message.
+- Alert history table with statuses: Active / Résolue. "Marquer comme résolue" button per alert.
+- Toggle between automatic alerts (threshold-triggered) and manual alerts (anticipatory).
+
+---
+
+### 15. GLOBAL LAYOUT — Missing components
+
+- **Notification bell** in navbar with live unread count badge for all roles.
+- **Role-colored navbar badge** next to user name:
+  - Donneur → red
+  - Centre de Transfusion → blue
+  - Banque de Sang → purple
+  - Hôpital → green ← *now a distinct entity*
+  - Clinique → teal ← *now a distinct entity*
+- **Critical stock alert banner** at top of all center pages when any blood type is critical.
+- **Sidebar profile card** at bottom: user name + role + blood type (donors) or center name + region (centers) or facility name + NumFiscal (clinics) or facility name + region (hospitals).
+
+---
+
+Apply all corrections while preserving the existing project structure, component library (shadcn/ui), routing (Wouter), and API hooks (`@workspace/api-client-react`). Hospital and Clinic must now be treated as two fully independent entities with separate routes, dashboards, sidebars, and navigation flows. Do not break existing working pages.

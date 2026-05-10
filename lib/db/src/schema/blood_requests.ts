@@ -5,12 +5,14 @@ import {
   integer,
   timestamp,
   real,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const bloodRequestsTable = pgTable("blood_requests", {
   id: serial("id").primaryKey(),
+  groupId: uuid("group_id"),
   establishmentId: integer("establishment_id").notNull(),
   establishmentName: text("establishment_name").notNull(),
   centerId: integer("center_id"),

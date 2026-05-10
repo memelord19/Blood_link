@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { randomUUID } from "crypto";
 import {
   db,
   bloodRequestsTable,
@@ -25,8 +26,60 @@ router.get("/requests", authMiddleware, async (req, res) => {
     ) {
       conditions.push(eq(bloodRequestsTable.centerId, req.user!.id));
       conditions.push(eq(bloodRequestsTable.centerType, req.user!.role));
+
+      if (status)
+        conditions.push(eq(bloodRequestsTable.status, status as string));
+      if (urgency)
+        conditions.push(eq(bloodRequestsTable.urgency, urgency as string));
+
+      const requests = await db
+        .select()
+        .from(bloodRequestsTable)
+        .where(and(...conditions));
+
+      return res.json({ requests, total: requests.length });
     } else if (req.user!.role === "hospital" || req.user!.role === "clinic") {
       conditions.push(eq(bloodRequestsTable.establishmentId, req.user!.id));
+
+      if (status)
+        conditions.push(eq(bloodRequestsTable.status, status as string));
+      if (urgency)
+        conditions.push(eq(bloodRequestsTable.urgency, urgency as string));
+
+      const allRequests = await db
+        .select()
+        .from(bloodRequestsTable)
+        .where(and(...conditions));
+
+      if (req.user!.role === "clinic") {
+        const STATUS_PRIORITY: Record<string, number> = {
+          delivered: 6,
+          shipped: 5,
+          accepted: 4,
+          processing: 3,
+          submitted: 2,
+          cancelled: 1,
+          rejected: 0,
+        };
+
+        const groups = new Map<string, any>();
+        for (const request of allRequests) {
+          const key = request.groupId ?? String(request.id);
+          const existing = groups.get(key);
+          if (
+            !existing ||
+            (STATUS_PRIORITY[request.status] ?? 0) >
+              (STATUS_PRIORITY[existing.status] ?? 0)
+          ) {
+            groups.set(key, request);
+          }
+        }
+
+        const requests = Array.from(groups.values());
+        return res.json({ requests, total: requests.length });
+      }
+
+      return res.json({ requests: allRequests, total: allRequests.length });
     } else {
       if (establishmentId)
         conditions.push(
@@ -39,22 +92,21 @@ router.get("/requests", authMiddleware, async (req, res) => {
         conditions.push(
           eq(bloodRequestsTable.centerId as any, parseInt(centerId as string)),
         );
+      if (status)
+        conditions.push(eq(bloodRequestsTable.status, status as string));
+      if (urgency)
+        conditions.push(eq(bloodRequestsTable.urgency, urgency as string));
+
+      const requests =
+        conditions.length > 0
+          ? await db
+              .select()
+              .from(bloodRequestsTable)
+              .where(and(...conditions))
+          : await db.select().from(bloodRequestsTable);
+
+      return res.json({ requests, total: requests.length });
     }
-
-    if (status)
-      conditions.push(eq(bloodRequestsTable.status, status as string));
-    if (urgency)
-      conditions.push(eq(bloodRequestsTable.urgency, urgency as string));
-
-    const requests =
-      conditions.length > 0
-        ? await db
-            .select()
-            .from(bloodRequestsTable)
-            .where(and(...conditions))
-        : await db.select().from(bloodRequestsTable);
-
-    res.json({ requests, total: requests.length });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -66,7 +118,7 @@ router.post("/requests", authMiddleware, async (req, res) => {
     const { bloodType, volume, urgency, centerIds } = req.body;
     const user = req.user!;
     const totalVolume = parseFloat(volume);
-
+    const groupId = randomUUID();
     const createRequest = async (centerId: string) => {
       const isBloodBank = String(centerId).startsWith("bb_");
       const rawId = parseInt(String(centerId).replace(/^(tc_|bb_)/, ""));
@@ -102,6 +154,7 @@ router.post("/requests", authMiddleware, async (req, res) => {
       const [request] = await db
         .insert(bloodRequestsTable)
         .values({
+          groupId,
           establishmentId: user.id,
           establishmentName:
             user.organizationName ?? `${user.firstName} ${user.lastName}`,
@@ -312,6 +365,7 @@ router.get("/requests/:id", authMiddleware, async (req, res) => {
 router.patch("/requests/:id", authMiddleware, async (req, res) => {
   try {
     const { status, estimatedDelivery, rejectionReason } = req.body;
+
     const [request] = await db
       .update(bloodRequestsTable)
       .set({
@@ -320,8 +374,26 @@ router.patch("/requests/:id", authMiddleware, async (req, res) => {
         rejectionReason,
         updatedAt: new Date(),
       })
-      .where(eq(bloodRequestsTable.id, parseInt(req.params.id)))
+      .where(eq(bloodRequestsTable.id, parseInt(req.params.id as string)))
       .returning();
+
+    // If accepted, cancel all other pending requests in the same group
+    if (status === "accepted" && request.groupId) {
+      await db
+        .update(bloodRequestsTable)
+        .set({
+          status: "cancelled",
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(bloodRequestsTable.groupId, request.groupId),
+            ne(bloodRequestsTable.id, request.id),
+            eq(bloodRequestsTable.status, "submitted"),
+          ),
+        );
+    }
+
     res.json(request);
   } catch (err) {
     req.log.error(err);

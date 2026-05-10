@@ -11,6 +11,10 @@ import alertsRouter from "./alerts";
 import invoicesRouter from "./invoices";
 import notificationsRouter from "./notifications";
 import dashboardRouter from "./dashboard";
+import transfusionCentersRouter from "./transfusion_centers";
+import establishmentsRouter from "./establishments";
+import centersRouter from "./centers";
+import bloodBanksRouter from "./blood_banks";
 
 const router: IRouter = Router();
 
@@ -26,5 +30,9 @@ router.use(alertsRouter);
 router.use(invoicesRouter);
 router.use(notificationsRouter);
 router.use(dashboardRouter);
+router.use(transfusionCentersRouter);
+router.use(establishmentsRouter);
+router.use(centersRouter);
+router.use(bloodBanksRouter);
 
 export default router;

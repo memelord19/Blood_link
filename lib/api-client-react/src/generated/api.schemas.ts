@@ -12,6 +12,7 @@ export interface HealthStatus {
 export interface LoginBody {
   email: string;
   password: string;
+  accountType: string;
 }
 
 export type RegisterBodyGender =

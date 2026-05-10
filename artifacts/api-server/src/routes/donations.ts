@@ -7,13 +7,40 @@ const router = Router();
 
 router.get("/donations", authMiddleware, async (req, res) => {
   try {
-    const { donorId, centerId } = req.query;
+    const { centerId } = req.query;
     const conditions: SQL[] = [];
-    if (donorId) conditions.push(eq(donationsTable.donorId, parseInt(donorId as string)));
-    if (centerId) conditions.push(eq(donationsTable.centerId, parseInt(centerId as string)));
-    const donations = conditions.length > 0
-      ? await db.select().from(donationsTable).where(and(...conditions))
-      : await db.select().from(donationsTable);
+
+    if (req.user!.role === "donor") {
+      const [donor] = await db
+        .select()
+        .from(donorsTable)
+        .where(eq(donorsTable.userId as any, req.user!.id))
+        .limit(1);
+
+      if (!donor) {
+        return res.json({ donations: [], total: 0 });
+      }
+
+      conditions.push(eq(donationsTable.donorId, donor.id));
+    } else if (req.user!.role === "transfusion_center") {
+      // Filter by the logged-in center's ID
+      conditions.push(eq(donationsTable.centerId, req.user!.id));
+    } else {
+      // Other roles (blood_bank, hospital, clinic): respect query param if provided
+      if (centerId)
+        conditions.push(
+          eq(donationsTable.centerId, parseInt(centerId as string)),
+        );
+    }
+
+    const donations =
+      conditions.length > 0
+        ? await db
+            .select()
+            .from(donationsTable)
+            .where(and(...conditions))
+        : await db.select().from(donationsTable);
+
     res.json({ donations, total: donations.length });
   } catch (err) {
     req.log.error(err);
@@ -23,44 +50,78 @@ router.get("/donations", authMiddleware, async (req, res) => {
 
 router.post("/donations", authMiddleware, async (req, res) => {
   try {
-    const { donorId, barcode, bloodType, collectionDate, expirationDate } = req.body;
-    const [donor] = await db.select().from(donorsTable).where(eq(donorsTable.id, parseInt(donorId))).limit(1);
-    if (!donor) { res.status(404).json({ error: "Donor not found" }); return; }
-    
+    const { donorCin, barcode, bloodType, collectionDate, expirationDate } =
+      req.body;
+
+    // Look up donor by CIN instead of ID
+    const [donor] = await db
+      .select()
+      .from(donorsTable)
+      .where(eq(donorsTable.cin, donorCin))
+      .limit(1);
+
+    if (!donor) {
+      res.status(404).json({ error: "Donneur introuvable avec ce CIN." });
+      return;
+    }
+
+    // Use the logged-in center's info instead of hardcoded values
+    const centerId = req.user!.id;
+    const centerName = req.user!.organizationName ?? req.user!.firstName;
+
     // Create blood bag
-    const [bag] = await db.insert(bloodBagsTable).values({
-      barcode,
-      bloodType,
-      donorId: parseInt(donorId),
-      centerId: 1,
-      centerName: "Centre National de Transfusion Sanguine",
-      collectionDate,
-      expirationDate,
-      status: "available",
-    }).returning();
-    
+    const [bag] = await db
+      .insert(bloodBagsTable)
+      .values({
+        barcode,
+        bloodType,
+        donorId: donor.id,
+        centerId,
+        centerName,
+        collectionDate,
+        expirationDate,
+        status: "available",
+      })
+      .returning();
+
     // Create donation record
-    const [donation] = await db.insert(donationsTable).values({
-      donorId: parseInt(donorId),
-      donorName: `${donor.firstName} ${donor.lastName}`,
-      centerId: 1,
-      centerName: "Centre National de Transfusion Sanguine",
-      bloodBagId: bag.id,
-      bloodBagBarcode: barcode,
-      bloodType,
-      donationDate: collectionDate,
-      status: "collected",
-    }).returning();
-    
+    const [donation] = await db
+      .insert(donationsTable)
+      .values({
+        donorId: donor.id,
+        donorName: `${donor.firstName} ${donor.lastName}`,
+        centerId,
+        centerName,
+        bloodBagId: bag.id,
+        bloodBagBarcode: barcode,
+        bloodType,
+        donationDate: collectionDate,
+        status: "collected",
+      })
+      .returning();
+
     // Update donor stats
-    await db.update(donorsTable).set({
-      totalDonations: donor.totalDonations + 1,
-      annualDonationsCount: donor.annualDonationsCount + 1,
-      lastDonationDate: collectionDate,
-      nextEligibleDate: new Date(new Date(collectionDate).getTime() + 56 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-    }).where(eq(donorsTable.id, parseInt(donorId)));
-    
-    res.status(201).json(donation);
+    const nextEligibleDate = new Date(
+      new Date(collectionDate).getTime() +
+        (donor.gender === "female" ? 84 : 56) * 24 * 60 * 60 * 1000,
+    )
+      .toISOString()
+      .split("T")[0];
+
+    await db
+      .update(donorsTable)
+      .set({
+        totalDonations: donor.totalDonations + 1,
+        annualDonationsCount: donor.annualDonationsCount + 1,
+        lastDonationDate: collectionDate,
+        nextEligibleDate,
+        eligibilityStatus: "temporarily_excluded",
+      })
+      .where(eq(donorsTable.id, donor.id));
+
+    res
+      .status(201)
+      .json({ ...donation, donorName: `${donor.firstName} ${donor.lastName}` });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });

@@ -7,3 +7,6 @@ export * from "./blood_requests";
 export * from "./alerts";
 export * from "./invoices";
 export * from "./notifications";
+export * from "./transfusion_centers";
+export * from "./blood_banks";
+export * from "./establishments";

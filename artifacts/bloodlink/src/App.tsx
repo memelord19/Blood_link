@@ -130,7 +130,7 @@ function AppRoutes() {
         </ProtectedRoute>
       </Route>
       <Route path="/center/collection">
-        <ProtectedRoute roles={["transfusion_center"]}>
+        <ProtectedRoute roles={["transfusion_center", "blood_bank"]}>
           <CenterCollection />
         </ProtectedRoute>
       </Route>
@@ -150,7 +150,7 @@ function AppRoutes() {
         </ProtectedRoute>
       </Route>
       <Route path="/center/deliveries">
-        <ProtectedRoute roles={["transfusion_center"]}>
+        <ProtectedRoute roles={["transfusion_center", "blood_bank"]}>
           <CenterDeliveries />
         </ProtectedRoute>
       </Route>

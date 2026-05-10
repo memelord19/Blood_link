@@ -58,7 +58,7 @@ function getNavItems(role: string) {
       { href: "/donor/notifications", label: "Notifications", icon: Bell },
     ];
   }
-  if (role === "transfusion_center") {
+  if (role === "transfusion_center" || role === "blood_bank") {
     return [
       {
         href: "/center/dashboard",
@@ -84,33 +84,6 @@ function getNavItems(role: string) {
         icon: Truck,
       },
       { href: "/center/alerts", label: "Alertes reçues", icon: AlertTriangle },
-    ];
-  }
-  if (role === "blood_bank") {
-    return [
-      {
-        href: "/center/dashboard",
-        label: "Tableau de bord",
-        icon: LayoutDashboard,
-      },
-      { href: "/center/donors", label: "Inscrire un Donneur", icon: Users },
-      {
-        href: "/center/appointments",
-        label: "Gestion Rendez-vous",
-        icon: Calendar,
-      },
-      {
-        href: "/center/reception",
-        label: "Réception de Poches",
-        icon: Activity,
-      },
-      { href: "/center/stock", label: "Vérifier Stock", icon: Package },
-      {
-        href: "/center/requests",
-        label: "Demandes Établissements",
-        icon: ClipboardList,
-      },
-      { href: "/center/alerts", label: "Envoyer Alertes", icon: AlertTriangle },
     ];
   }
   if (role === "hospital") {

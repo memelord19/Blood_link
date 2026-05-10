@@ -27,17 +27,30 @@ router.get("/blood-bags", authMiddleware, async (req, res) => {
   try {
     const { bloodType, centerId, status, expiringBefore } = req.query;
     const conditions: SQL[] = [];
+
+    // Auto-filter by center for transfusion centers and blood banks
+    if (
+      req.user!.role === "transfusion_center" ||
+      req.user!.role === "blood_bank"
+    ) {
+      conditions.push(eq(bloodBagsTable.centerId, req.user!.id));
+      conditions.push(eq(bloodBagsTable.centerType, req.user!.role));
+    } else {
+      // Other roles respect query params
+      if (centerId)
+        conditions.push(
+          eq(bloodBagsTable.centerId, parseInt(centerId as string)),
+        );
+    }
+
     if (bloodType)
       conditions.push(eq(bloodBagsTable.bloodType, bloodType as string));
-    if (centerId)
-      conditions.push(
-        eq(bloodBagsTable.centerId, parseInt(centerId as string)),
-      );
     if (status) conditions.push(eq(bloodBagsTable.status, status as string));
     if (expiringBefore)
       conditions.push(
         lte(bloodBagsTable.expirationDate, expiringBefore as string),
       );
+
     const bags =
       conditions.length > 0
         ? await db
@@ -45,6 +58,7 @@ router.get("/blood-bags", authMiddleware, async (req, res) => {
             .from(bloodBagsTable)
             .where(and(...conditions))
         : await db.select().from(bloodBagsTable);
+
     res.json({ bloodBags: bags, total: bags.length });
   } catch (err) {
     req.log.error(err);

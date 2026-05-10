@@ -6,12 +6,11 @@ import {
   AlertTriangle,
   Flame,
   Activity,
-  Info,
   Building2,
+  X,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Layout } from "@/components/Layout";
 import { BloodTypeBadge } from "@/components/BloodTypeBadge";
@@ -48,32 +47,13 @@ export default function ClinicRequest() {
   const [bloodType, setBloodType] = useState("");
   const [volume, setVolume] = useState("");
   const [urgency, setUrgency] = useState("normal");
-  const [selectedCenter, setSelectedCenter] = useState<any>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [centers, setCenters] = useState<any[]>([]);
-  const [loadingCenters, setLoadingCenters] = useState(true);
+  const [step, setStep] = useState<"form" | "select-centers">("form");
+  const [externalCenters, setExternalCenters] = useState<any[]>([]);
+  const [selectedCenters, setSelectedCenters] = useState<any[]>([]);
 
   const createMutation = useCreateBloodRequest();
   const { token } = useAuth();
-  // Fetch transfusion centers directly
-  React.useEffect(() => {
-    console.log("token value:", token);
-    if (!token) {
-      setLoadingCenters(false);
-      return;
-    }
-
-    fetch("http://localhost:3000/api/centers", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((data) => setCenters(data.centers || []))
-      .catch((err) => {
-        console.error("Error fetching centers:", err);
-        toast.error("Impossible de charger les centres.");
-      })
-      .finally(() => setLoadingCenters(false));
-  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,8 +61,40 @@ export default function ClinicRequest() {
       toast.error("Veuillez remplir tous les champs.");
       return;
     }
-    if (!selectedCenter) {
-      toast.error("Veuillez sélectionner un centre de transfusion.");
+    try {
+      const result = (await createMutation.mutateAsync({
+        data: { bloodType, volume: parseFloat(volume), urgency } as any,
+      })) as any;
+
+      if (result.needsExternalSelection) {
+        setExternalCenters(result.externalCenters);
+        setStep("select-centers");
+        toast.info("Sélectionnez jusqu'à 3 centres pour votre demande.");
+      } else {
+        setSubmitted(true);
+        toast.success("Demande enregistrée avec succès.");
+      }
+    } catch {
+      toast.error("Erreur lors de l'envoi de la demande.");
+    }
+  };
+
+  const toggleCenter = (center: any) => {
+    setSelectedCenters((prev) => {
+      const already = prev.find((c) => c.prefixedId === center.prefixedId);
+      if (already)
+        return prev.filter((c) => c.prefixedId !== center.prefixedId);
+      if (prev.length >= 3) {
+        toast.error("Vous ne pouvez sélectionner que 3 centres maximum.");
+        return prev;
+      }
+      return [...prev, center];
+    });
+  };
+
+  const handleExternalSubmit = async () => {
+    if (selectedCenters.length === 0) {
+      toast.error("Veuillez sélectionner au moins un centre.");
       return;
     }
     try {
@@ -91,13 +103,13 @@ export default function ClinicRequest() {
           bloodType,
           volume: parseFloat(volume),
           urgency,
-          centerId: selectedCenter.id,
+          centerIds: selectedCenters.map((c) => c.prefixedId),
         } as any,
       });
       setSubmitted(true);
-      toast.success("Demande enregistrée avec succès.");
+      toast.success("Demande(s) enregistrée(s) avec succès.");
     } catch {
-      toast.error("Erreur lors de l'envoi de la demande.");
+      toast.error("Erreur lors de l'envoi.");
     }
   };
 
@@ -105,8 +117,10 @@ export default function ClinicRequest() {
     setBloodType("");
     setVolume("");
     setUrgency("normal");
-    setSelectedCenter(null);
     setSubmitted(false);
+    setStep("form");
+    setExternalCenters([]);
+    setSelectedCenters([]);
   };
 
   return (
@@ -131,11 +145,10 @@ export default function ClinicRequest() {
             >
               <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-green-800 mb-2">
-                Demande enregistrée !
+                Demande(s) enregistrée(s) !
               </h2>
               <p className="text-green-700 mb-6">
-                Votre demande a été transmise à{" "}
-                <strong>{selectedCenter?.nom}</strong>.
+                Vous recevrez une notification dès qu'une demande sera traitée.
               </p>
               <div className="flex gap-3 justify-center">
                 <Button
@@ -149,6 +162,109 @@ export default function ClinicRequest() {
                 </Button>
               </div>
             </motion.div>
+          ) : step === "select-centers" ? (
+            <motion.div
+              key="select"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-5"
+            >
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-primary" />
+                    Sélectionnez jusqu'à 3 centres ({selectedCenters.length}/3)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {externalCenters.map((center: any) => {
+                    const isSelected = selectedCenters.find(
+                      (c) => c.prefixedId === center.prefixedId,
+                    );
+                    return (
+                      <button
+                        key={center.prefixedId}
+                        type="button"
+                        onClick={() => toggleCenter(center)}
+                        className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
+                          isSelected
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/40"
+                        }`}
+                      >
+                        <div>
+                          <p className="font-semibold text-sm text-foreground">
+                            {center.nom}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {center.adresse} — {center.region}
+                            <span
+                              className={`ml-2 px-1.5 py-0.5 rounded text-xs font-medium ${
+                                center.type === "blood_bank"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-blue-100 text-blue-700"
+                              }`}
+                            >
+                              {center.type === "blood_bank"
+                                ? "Banque de sang"
+                                : "Centre de transfusion"}
+                            </span>
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <CheckCircle className="w-5 h-5 text-primary shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+
+              {selectedCenters.length > 0 && (
+                <div className="bg-muted/30 border border-border rounded-xl p-4">
+                  <p className="text-sm font-semibold text-foreground mb-2">
+                    Centres sélectionnés :
+                  </p>
+                  <div className="space-y-1">
+                    {selectedCenters.map((c) => (
+                      <div
+                        key={c.prefixedId}
+                        className="flex items-center justify-between text-sm"
+                      >
+                        <span>{c.nom}</span>
+                        <button
+                          onClick={() => toggleCenter(c)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep("form")}
+                  className="flex-1"
+                >
+                  Retour
+                </Button>
+                <Button
+                  className="flex-1 bg-primary hover:bg-primary/90 text-white"
+                  onClick={handleExternalSubmit}
+                  disabled={
+                    selectedCenters.length === 0 || createMutation.isPending
+                  }
+                >
+                  {createMutation.isPending
+                    ? "Envoi..."
+                    : `Envoyer à ${selectedCenters.length} centre(s)`}
+                </Button>
+              </div>
+            </motion.div>
           ) : (
             <motion.div
               key="form"
@@ -156,55 +272,6 @@ export default function ClinicRequest() {
               animate={{ opacity: 1 }}
             >
               <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Center selection */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Building2 className="w-5 h-5 text-primary" />
-                      Centre de transfusion
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {loadingCenters ? (
-                      <div className="space-y-2">
-                        {[...Array(3)].map((_, i) => (
-                          <div
-                            key={i}
-                            className="h-16 bg-muted animate-pulse rounded-xl"
-                          />
-                        ))}
-                      </div>
-                    ) : centers.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Aucun centre disponible.
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {centers.map((center: any) => (
-                          <button
-                            key={center.id}
-                            type="button"
-                            onClick={() => setSelectedCenter(center)}
-                            className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                              selectedCenter?.id === center.id
-                                ? "border-primary bg-primary/5"
-                                : "border-border hover:border-primary/40"
-                            }`}
-                          >
-                            <p className="font-semibold text-sm text-foreground">
-                              {center.nom}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {center.adresse} — {center.region}
-                            </p>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Blood type */}
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
@@ -233,12 +300,11 @@ export default function ClinicRequest() {
                   </CardContent>
                 </Card>
 
-                {/* Volume */}
                 <Card>
                   <CardContent className="p-5">
-                    <Label className="text-sm font-medium">
+                    <label className="text-sm font-medium">
                       Volume requis (mL) *
-                    </Label>
+                    </label>
                     <div className="flex gap-2 mt-2 flex-wrap">
                       {[250, 450, 500, 900].map((v) => (
                         <button
@@ -263,7 +329,6 @@ export default function ClinicRequest() {
                   </CardContent>
                 </Card>
 
-                {/* Urgency */}
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">
@@ -298,13 +363,12 @@ export default function ClinicRequest() {
                   </CardContent>
                 </Card>
 
-                {/* Summary */}
-                {bloodType && volume && selectedCenter && (
+                {bloodType && volume && (
                   <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-xl border border-border">
                     <BloodTypeBadge bloodType={bloodType} />
                     <div>
                       <p className="font-semibold text-foreground">
-                        {volume} mL de sang {bloodType} → {selectedCenter.nom}
+                        Récapitulatif : {volume} mL de sang {bloodType}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Urgence :{" "}
@@ -320,16 +384,9 @@ export default function ClinicRequest() {
                 <Button
                   type="submit"
                   className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3"
-                  disabled={
-                    createMutation.isPending ||
-                    !bloodType ||
-                    !volume ||
-                    !selectedCenter
-                  }
+                  disabled={createMutation.isPending || !bloodType || !volume}
                 >
-                  {createMutation.isPending
-                    ? "Envoi en cours..."
-                    : "Envoyer la demande"}
+                  {createMutation.isPending ? "Vérification..." : "Continuer"}
                 </Button>
               </form>
             </motion.div>

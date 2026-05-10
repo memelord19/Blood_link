@@ -9,6 +9,7 @@ export const bloodBagsTable = pgTable("blood_bags", {
   donorId: integer("donor_id"),
   centerId: integer("center_id").notNull(),
   centerName: text("center_name").notNull(),
+  centerType: text("center_type").notNull().default("transfusion_center"),
   collectionDate: text("collection_date").notNull(),
   expirationDate: text("expiration_date").notNull(),
   status: text("status").notNull().default("available"), // available, reserved, transfused, expired, rejected
@@ -17,6 +18,9 @@ export const bloodBagsTable = pgTable("blood_bags", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertBloodBagSchema = createInsertSchema(bloodBagsTable).omit({ id: true, createdAt: true });
+export const insertBloodBagSchema = createInsertSchema(bloodBagsTable).omit({
+  id: true,
+  createdAt: true,
+});
 export type InsertBloodBag = z.infer<typeof insertBloodBagSchema>;
 export type BloodBag = typeof bloodBagsTable.$inferSelect;

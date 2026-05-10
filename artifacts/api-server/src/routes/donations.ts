@@ -10,7 +10,13 @@ router.get("/donations", authMiddleware, async (req, res) => {
     const { centerId } = req.query;
     const conditions: SQL[] = [];
 
-    if (req.user!.role === "donor") {
+    if (
+      req.user!.role === "transfusion_center" ||
+      req.user!.role === "blood_bank"
+    ) {
+      conditions.push(eq(donationsTable.centerId, req.user!.id));
+      conditions.push(eq(donationsTable.centerType, req.user!.role));
+    } else if (req.user!.role === "donor") {
       const [donor] = await db
         .select()
         .from(donorsTable)
@@ -22,11 +28,7 @@ router.get("/donations", authMiddleware, async (req, res) => {
       }
 
       conditions.push(eq(donationsTable.donorId, donor.id));
-    } else if (req.user!.role === "transfusion_center") {
-      // Filter by the logged-in center's ID
-      conditions.push(eq(donationsTable.centerId, req.user!.id));
     } else {
-      // Other roles (blood_bank, hospital, clinic): respect query param if provided
       if (centerId)
         conditions.push(
           eq(donationsTable.centerId, parseInt(centerId as string)),
@@ -68,6 +70,7 @@ router.post("/donations", authMiddleware, async (req, res) => {
     // Use the logged-in center's info instead of hardcoded values
     const centerId = req.user!.id;
     const centerName = req.user!.organizationName ?? req.user!.firstName;
+    const centerType = req.user!.role; // "transfusion_center" or "blood_bank"
 
     // Create blood bag
     const [bag] = await db
@@ -78,6 +81,7 @@ router.post("/donations", authMiddleware, async (req, res) => {
         donorId: donor.id,
         centerId,
         centerName,
+        centerType,
         collectionDate,
         expirationDate,
         status: "available",
@@ -92,6 +96,7 @@ router.post("/donations", authMiddleware, async (req, res) => {
         donorName: `${donor.firstName} ${donor.lastName}`,
         centerId,
         centerName,
+        centerType,
         bloodBagId: bag.id,
         bloodBagBarcode: barcode,
         bloodType,

@@ -85,6 +85,7 @@ router.get("/dashboard/center", authMiddleware, async (req, res) => {
         and(
           eq(bloodBagsTable.status, "available"),
           eq(bloodBagsTable.centerId, centerId),
+          eq(bloodBagsTable.centerType, centerRole),
         ),
       );
 
